@@ -1,0 +1,30 @@
+Project Rundown
+
+Group Members:
+
+Project Overview:
+SmartShip Ltd. is a courier company that ships packages for customers locally
+and internationally. The company wants to modernize its operations with a system that
+allows customers to create shipment requests, track packages, and receive invoices. Staff
+members should be able to manage vehicles and delivery schedules, ensuring no vehicle is
+overbooked or double-assigned. Managers require reports on shipments, revenue, and
+delivery performance.
+
+Identified Classes:
+
+User Class - Parent Class
+  Sub Classes:
+  ->Customer
+  ->VDriver - (vehicle driver)
+  ->Clerk
+  ->Manager
+
+Other Classes:
+-Vehicle
+-Package
+-Delivery
+-DriverLicense
+
+Composition Relationship Classes:
+-Address
+-Date
