@@ -1,6 +1,14 @@
 Project Rundown
 
 Group Members:
+1. 
+2. 
+3. 
+4. 
+5.
+
+Due Date: November 13, 2025
+Interview: Week 13
 
 Project Overview:
 SmartShip Ltd. is a courier company that ships packages for customers locally
@@ -11,7 +19,6 @@ overbooked or double-assigned. Managers require reports on shipments, revenue, a
 delivery performance.
 
 Identified Classes:
-
 User Class - Parent Class
   Sub Classes:
   ->Customer
@@ -28,3 +35,114 @@ Other Classes:
 Composition Relationship Classes:
 -Address
 -Date
+
+
+Functional Requirements:
+
+Customers:
+* Create a new account.
+* Can log into the system after their account has been created and verified.
+* Request/Create shipments.
+* Track packages via online account
+* View Invoices generated
+* Pay for Invoice via cash or card
+
+
+Clerk:
+* Process shipment request by customers
+* Assign packages to delivery routes
+* Assign shipments to vehicle
+* Update Statuses
+* Handle payments 
+
+Drivers:
+* View Assigned deliveries (ater being validated by the clerk)
+* Update package status (eg. Intransit, Delivered)
+
+
+Managers:
+* Can manager user accounts 
+* Oversee every operation that takes place
+* View all Reports
+* Fleet Management (vehicles etc.)
+
+
+Additional Possible Requirements:
+* 
+*
+*
+*
+*
+*
+*
+*
+
+Modules:
+
+Shipment Module:
+* Specify Sender Information (Possibility of 2 new Classes -> Sender & Recipient)
+* Package Weight 
+* Dimensions
+* Type (Standard, express, fragile)
+* Destination (Address + Zone 1, 2, 3, 4) - We canuse the address class to make the destination object
+-------------------------------------------------------------------------------------------------------
+~ The sysytem should calculate the shipping cost based on:
+* Weight of the package
+* Distance to be travelled
+* Type of package (Standard, express, fragile)
+-------------------------------------------------------------------------------------------------------
+~ Shipment has 5 Statuses:
+* Pending - waiting on confirmation from the clerk
+* Assigned - describes the (Driver, Destination, Package information (weight, cost, type), Vehicle Description)
+* In-transit - 
+* Delivered - 
+* Cancelled - display the sender and recipient info, time and date of cancellation, original destination
+-------------------------------------------------------------------------------------------------------
+* Tracking numbers should be automatically generated
+* Customers can track packages via Online account
+-------------------------------------------------------------------------------------------------------
+~ Distance is determined by zones (1, 2, 3, 4). Disntace can be a randomly generated based on zone
+* Zone 1 - nearest (x to y km)
+* Zone 2 - medium range (x to y km)
+* Zone 3 - long range (x to y km)
+* Zone 4 - very ling range (x to y km)
+-------------------------------------------------------------------------------------------------------
+Vehicle & Scheduling Module:
+* Undefined Number of vehicles
+* Each vehicle has a capacity - (can determine the capacity based on vehicle type)
+* A vehicle should not be assigned more packages than it can hold - ( we can determine the amount of packages each vehicle may accomodate)
+* Drivers must login to see their routes
+* Drivers must Login to see the packges for the day to be delivered.
+-------------------------------------------------------------------------------------------------------
+Billing & Payments:
+• Invoices generated for every shipment. (once validated and confiremed)
+• Customers can pay via cash or card. (only 2 payment methods)
+• Status: Paid / Partially Paid / Unpaid. (we need to define rules for partially paid)
+• Discounts or surcharges (e.g., express delivery, fragile handling).
+• Receipts are displayed or PDF exported. (let's do both)
+-------------------------------------------------------------------------------------------------------
+Entity & Design Requirements (due Week 2)
+• ER Diagram with relationships:
+o Customer ↔ Shipment
+o Shipment ↔ Vehicle (many-to-many resolved by Assignment)
+• Class Diagram mapping business objects (e.g., User, Customer, Shipment, Vehicle,
+Invoice, Payment).
+• Ensure 3NF normalization.
+-------------------------------------------------------------------------------------------------------
+Software Architecture
+• Java Client/Server application with database hosted on server.
+• GUI:
+  o Customer portal: create shipments, track packages, view/pay invoices.
+  o Clerk portal: assign shipments to vehicles, update status, manage payments.
+  o Driver portal: view assigned shipments, update delivery status.
+  o Manager portal: reporting, fleet management, user management.
+• Concurrency: handle multiple shipment requests simultaneously without
+overbooking vehicles.
+-------------------------------------------------------------------------------------------------------
+
+EXTRA CREDIT:
+1. Threaded Server & Multi-user handling (5%)
+Server handles concurrent shipment bookings and assignments safely.
+
+2. Formatted PDF Reports (5%)
+Professionally formatted reports with tables, totals, and charts (if possible).
