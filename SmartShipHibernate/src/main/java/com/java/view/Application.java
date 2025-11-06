@@ -10,6 +10,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLSyntaxErrorException;
 import java.sql.Statement;
+import java.util.ArrayList;
+
 import com.java.hibernate.*;
 
 
@@ -86,32 +88,182 @@ public class Application extends JFrame {
 		setSize(1980,1080);
 		setVisible(true);
 		
-		//creation of the desk tp pan to house the internal framw
+		//creation of the desktop pane to house the internal frame
 		desktop = new JDesktopPane();
 		setContentPane(desktop);
 		
 		//Add the internal frame
 		signUpFrame("Sign Up", 600, 700); //title, width, height of the internal signup frame
-		
-		
-		
-		
+
 	}
+
+	//recursive method to track the number of tries left for the secret code
+	public int triesTracker(int tries){
+		
+		if(tries >= 0) {
+			return 0;
+		}
+		
+		return triesTracker(tries - 1);
+	}
+	
+	//responsible for prompting the user for a special code and converting the string to a integer.
+	public int jConvert() {
+		
+		String code = JOptionPane.showInputDialog("Enter the secret code!");
+		//now we want to parse the string value
+		int codeConvert = Integer.parseInt(code);
+		
+		return codeConvert;
+	}//end of jConvert method
+	
+	
+	public int emailCheck(JTextField jEmail) { //taking the email textfield as an arguments
+			
+		String[] emailExt = {"@gmail.com", "@yahoo.com", "@outlook.com", "@hotmail.com", "@icloud.com", "@zoho.com", "@proton.me", "@protonmail.com", "@tutanota.com "};
+		String[] staffEmailExt = {"@clerk.smartship.com", "@driver.smartship.com", "manager.smartship.com"};
+		
+		final int staffCode = 1234; //allow for re input 3 times
+		final int mngCode = 4321;  //allow for re input 3 times
+		int returnedCode;
+		
+		int tries = 3;
+		int remainder = triesTracker(tries);
+	
+		String email = jEmail.getText();
+		
+		int switchVal = 0;
+		if(email.contains(emailExt[0])) {
+			switchVal = 1;
+		}else if(email.contains(emailExt[1])){
+			switchVal = 2;
+		}
+		else if(email.contains(emailExt[2])){
+			switchVal = 3;
+		}else if(email.contains(emailExt[3])){
+			switchVal = 4;
+		}else if(email.contains(emailExt[4])){
+			switchVal = 5;
+		}else if(email.contains(emailExt[5])){
+			switchVal = 6;
+		}else if(email.contains(emailExt[6])){
+			switchVal = 7;
+		}else if(email.contains(emailExt[7])){
+			switchVal = 8;
+		}else if(email.contains(emailExt[8])){
+			switchVal = 9;
+		}else if(email.contains(staffEmailExt[0])){
+			switchVal = 10;
+		}else if(email.contains(staffEmailExt[1])){
+			switchVal = 11;
+		}else if(email.contains(staffEmailExt[2])){
+			switchVal = 12;
+		}
+			
+		switch(switchVal) {
+		
+		case 1:
+				//register in the customer database
+				//redirect to the customer interface
+			break;
+		case 2:
+			//register in the customer database
+			//redirect to the customer interface
+			break;
+		case 3:
+			//register in the customer database
+			//redirect to the customer interface
+			break;
+		case 4:
+			//register in the customer database
+			//redirect to the customer interface
+			break;
+		case 5:
+			//register in the customer database
+			//redirect to the customer interface
+			break;
+		case 6:
+			//register in the customer database
+			//redirect to the customer interface
+			break;
+		case 7:
+			//register in the customer database
+			//redirect to the customer interface
+			break;
+		case 8:
+			//register in the customer database
+			//redirect to the customer interface
+			break;
+		case 9:
+			//register in the customer database
+			//close the sign up form
+			//redirect to the customer interface
+			break;
+		case 10:
+			//prompt for the staff registration code(security against unauthorized creation of a staff account)
+			
+			returnedCode = jConvert();
+			if (returnedCode == staffCode){
+				return 2;
+			}else {
+				for(tries = 3; tries >= 0; tries--) {
+					System.out.println("\nYou have [" + remainder + "] tries left.");
+					returnedCode = jConvert();
+				}
+			}
+			break;
+			
+		case 11:
+			return 4;
+			
+		case 12:
+			//prompt for the manager registration ode (security against unauthorized creation of a manger account)
+			returnedCode = jConvert();
+			if (returnedCode == mngCode){
+				return 3;
+			}else {
+				for(tries = 3; tries >= 0; tries--) {
+					System.out.println("\nYou have [" + remainder + "] tries left.");
+					returnedCode = jConvert();
+				}
+			}//end else
+			break;
+			
+			default :
+				
+				JOptionPane.showMessageDialog(
+						signUpFrame, 
+						"You did not enter a supported email domain extension", 
+						"Create Status", 
+						JOptionPane.ERROR_MESSAGE);
+				return -1;
+				
+		}//end of customer switch
+		
+		return 0;
+	}
+	
+
 	
 	
 	//This method is used to create a sign up internal frame to be used in the constructor
 	public void signUpFrame(String title,  int width, int height) {
 		
 		signUpFrame = new JInternalFrame(title, true, true, true, true);
-		
 		//Internal frame attributes
 		signUpFrame.setSize(width, height);
-		
 		signUpFrame.setDefaultCloseOperation(EXIT_ON_CLOSE);
 	
 		//Layouts and constraints		
 		signUpFrame.setLayout(new GridBagLayout());
 		GridBagConstraints gbc = new GridBagConstraints();
+		
+		//Making an Array of email domain extensions that we allow
+		//ArrayList<String> emailExt = new ArrayList<>();
+		
+		
+		
+
 		
 		//Labels
 		//First Name Label
@@ -450,7 +602,7 @@ public class Application extends JFrame {
         signUpBtn.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String cusId = idTextField.getText().trim();
+				String id = idTextField.getText().trim();
 				String firstName = firstNameTextField.getText().trim();
 				String lastName = lastNameTextField.getText().trim();
 				
@@ -484,6 +636,8 @@ public class Application extends JFrame {
 							JOptionPane.ERROR_MESSAGE);
 					return;
 				}
+				
+				
 			
 				//parse the data once we know that the data field is not void
 				int day = Integer.parseInt(dayS);
@@ -500,15 +654,71 @@ public class Application extends JFrame {
 				
 				retrievePreviousId();
 				
-				boolean isAdded = create(new Customer( firstName,  lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email,  paymentMethod));
-				if (isAdded) {
-					JOptionPane.showMessageDialog(
-							signUpFrame, 
-							"Record added", 
-							"Create Status", 
-							JOptionPane.INFORMATION_MESSAGE);
-				}
-			}
+				int returnedEmailCheckVal = emailCheck(emailTextField);
+				
+				switch(returnedEmailCheckVal) {
+				
+				case 2:
+					//this is the method that create a specific user
+					boolean clerkIsAdded = create(new Clerk( firstName, lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email));
+					if (clerkIsAdded) {
+						JOptionPane.showMessageDialog(
+								signUpFrame, 
+								"Clerk Record added", 
+								"Create Status", 
+								JOptionPane.INFORMATION_MESSAGE);
+					}
+					break;
+						
+				case 3:
+					//this is the method that create a specific user
+					boolean manIsAdded = create(new Manager( firstName,  lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email));
+					if (manIsAdded) {
+						JOptionPane.showMessageDialog(
+								signUpFrame, 
+								"Manager Record added", 
+								"Create Status", 
+								JOptionPane.INFORMATION_MESSAGE);
+					}
+					break;
+				case 1:
+					//this is the method that create a specific user
+					boolean cusIsAdded = create(new Customer( firstName,  lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email,  paymentMethod));
+					if (cusIsAdded) {
+						JOptionPane.showMessageDialog(
+								signUpFrame, 
+								"Customer Record added", 
+								"Create Status", 
+								JOptionPane.INFORMATION_MESSAGE);
+					}
+					break;
+					
+				case 4:
+					//this is the method that create a specific user
+					boolean driverIsAdded = create(new VDriver( firstName,  lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email));
+					if (driverIsAdded) {
+						JOptionPane.showMessageDialog(
+								signUpFrame, 
+								"Driver Record added", 
+								"Create Status", 
+								JOptionPane.INFORMATION_MESSAGE);
+					}
+					break;
+					
+				case -1:
+					try {
+						signUpFrame.setClosed(true);
+						signUpFrame("Sign Up", 600, 700);
+					} catch (PropertyVetoException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					break;
+	
+				}//end of switch
+				
+
+			}//end of action performed
 		});
         
       //add an action listener
@@ -608,6 +818,50 @@ public class Application extends JFrame {
 	}//End of loginFram 
 	
 	
+	//Method is used for authentication login for all users (Customers, Managers, Clerks and Drivers)
+	public static void userAuth() {
+		
+		//Step 1 - declare variables to store user email and password (These will be used as the credentials for sign in)
+		//Step 2 - we need to check the user's inputed credentials against that of the database
+		//Step 3 - we need to call this method when the login button is pressed when in the login UI.
+		//Basically, we dont want it to be a case where the authentication begins at the sign up page when the loginbtn is click
+		//only when the interface has been changed to that of the login interface.
+		
+		
+		/*Possible Logic for userAuth();
+		 * 
+		 * Declare variables - String email, password
+		 * 
+		 *  ArrayList<String> emailExt = new ArrayList<>(); 
+		 *  We can have a predefined array that displays the email extensions we allow
+		 *  
+		 * Add the following: @gmail.com, @yahoo.com. @oulook.com, @hotmail.com, @icloud.com, @zoho.com, @proton.me 
+		 * @protonmail.com, @tutanota.com, @gmx.com
+		 * 
+		 * 		 * RULES: 
+		 * Customers are allowed to user for exmaple, @gmail.com, @yahoo.com. @oulook.com etc..
+		 * Clerk: @clerk.smartship.com
+		 * Manager: @manager.smartship.com
+		 * Driver: @driver.smartship.com
+		 * 
+		 * 
+		 * if(emailTextfield == email from the database && passwordTextField == password from the database){
+		 * 	
+		 * 	PRINT Success Message:  Successful Login (JOption to display a message dialog)
+		 * 	REDIRECT: we redirect the user to their respective interfaces.
+		 * 	LOG:  Log the user that logged into the system [username, id, time, date, ipAdd]
+		 * 
+		 * 
+		 *
+		 *	
+		 * 	
+		 * 	
+		 * }
+		 * */
+		
+		//Add a switch statement to control each users interface 
+	}
+	
 	
 	private static Connection getDatabase() {
 		if (dbConn==null) {
@@ -627,6 +881,54 @@ public class Application extends JFrame {
 	private boolean create(Customer cus) {
 		String sql = "INSERT INTO apProjectv1.Customer (cusId, firstName, lastName, day, month, year, age, nationalId, country, street, city, state, zipCode, username, password, email, telNum, paymentMethod) "
 				   + "VALUES ('"+cus.getCusId()+"','"+cus.getFirstName()+"','"+cus.getLastName()+"','"+cus.getDob().getDay()+"','"+cus.getDob().getMonth()+"', '"+cus.getDob().getYear()+"', '"+cus.getAge()+"', '"+cus.getNationalId()+"', '"+cus.getAddress().getCountry()+"', '"+cus.getAddress().getStreet()+"', '"+cus.getAddress().getCity()+"', '"+cus.getAddress().getState()+"', '"+cus.getAddress().getZipCode()+"', '"+cus.getUsername()+"', '"+cus.getPassword()+"', '"+cus.getEmail()+"', '"+cus.getTelNum()+"',  '"+cus.getPaymentMethod()+"');";
+		try {
+			//System.out.println(sql);
+			stmt = dbConn.createStatement();
+			int affectedRows = stmt.executeUpdate(sql);
+			return affectedRows == 1;
+		} catch (SQLSyntaxErrorException e) {
+			System.err.println(e.getMessage());
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	private boolean create(Manager man) {
+		String sql = "INSERT INTO apProjectv1.Manager (mngId, firstName, lastName, day, month, year, age, nationalId, country, street, city, state, zipCode, username, password, email, telNum) "
+				   + "VALUES ('"+man.getMngId()+"','"+man.getFirstName()+"','"+man.getLastName()+"','"+man.getDob().getDay()+"','"+man.getDob().getMonth()+"', '"+man.getDob().getYear()+"', '"+man.getAge()+"', '"+man.getNationalId()+"', '"+man.getAddress().getCountry()+"', '"+man.getAddress().getStreet()+"', '"+man.getAddress().getCity()+"', '"+man.getAddress().getState()+"', '"+man.getAddress().getZipCode()+"', '"+man.getUsername()+"', '"+man.getPassword()+"', '"+man.getEmail()+"', '"+man.getTelNum()+"');";
+		try {
+			//System.out.println(sql);
+			stmt = dbConn.createStatement();
+			int affectedRows = stmt.executeUpdate(sql);
+			return affectedRows == 1;
+		} catch (SQLSyntaxErrorException e) {
+			System.err.println(e.getMessage());
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	private boolean create(Clerk ck) {
+		String sql = "INSERT INTO apProjectv1.Clerk (clerkId, firstName, lastName, day, month, year, age, nationalId, country, street, city, state, zipCode, username, password, email, telNum) "
+				   + "VALUES ('"+ck.getClerkId()+"','"+ck.getFirstName()+"','"+ck.getLastName()+"','"+ck.getDob().getDay()+"','"+ck.getDob().getMonth()+"', '"+ck.getDob().getYear()+"', '"+ck.getAge()+"', '"+ck.getNationalId()+"', '"+ck.getAddress().getCountry()+"', '"+ck.getAddress().getStreet()+"', '"+ck.getAddress().getCity()+"', '"+ck.getAddress().getState()+"', '"+ck.getAddress().getZipCode()+"', '"+ck.getUsername()+"', '"+ck.getPassword()+"', '"+ck.getEmail()+"', '"+ck.getTelNum()+"');";
+		try {
+			//System.out.println(sql);
+			stmt = dbConn.createStatement();
+			int affectedRows = stmt.executeUpdate(sql);
+			return affectedRows == 1;
+		} catch (SQLSyntaxErrorException e) {
+			System.err.println(e.getMessage());
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	private boolean create(VDriver dr) {
+		String sql = "INSERT INTO apProjectv1.Driver (driverId, firstName, lastName, day, month, year, age, nationalId, country, street, city, state, zipCode, username, password, email, telNum) "
+				   + "VALUES ('"+dr.getDriverId()+"','"+dr.getFirstName()+"','"+dr.getLastName()+"','"+dr.getDob().getDay()+"','"+dr.getDob().getMonth()+"', '"+dr.getDob().getYear()+"', '"+dr.getAge()+"', '"+dr.getNationalId()+"', '"+dr.getAddress().getCountry()+"', '"+dr.getAddress().getStreet()+"', '"+dr.getAddress().getCity()+"', '"+dr.getAddress().getState()+"', '"+dr.getAddress().getZipCode()+"', '"+dr.getUsername()+"', '"+dr.getPassword()+"', '"+dr.getEmail()+"', '"+dr.getTelNum()+"');";
 		try {
 			//System.out.println(sql);
 			stmt = dbConn.createStatement();
@@ -660,4 +962,4 @@ public class Application extends JFrame {
 			e.printStackTrace();
 		}
 	}
-}
+}//end of classs

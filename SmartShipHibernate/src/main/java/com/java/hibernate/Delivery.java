@@ -1,5 +1,8 @@
 package com.java.hibernate;
 
+import jakarta.persistence.Embeddable;
+
+@Embeddable
 public class Delivery {
 	
 	//For the deliveries we need to know the following

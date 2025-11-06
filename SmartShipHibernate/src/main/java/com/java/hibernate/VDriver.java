@@ -1,36 +1,51 @@
 package com.java.hibernate;
 import java.io.Serializable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+@Entity
+@Table(name="Driver")
 public class VDriver extends User implements Serializable {
 		private static final long serialVersionUID = 1L;
 		
-		private String driverId;
+		@Id
+		@Column(name="driverId")
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+		
+		private long driverId;
 		//private Route route;
+		@Embedded
 		private Vehicle assignedVehicle;
+		@Embedded
 		private DriverLicense license;
+		@Embedded
 		private Delivery assignedDeliveries;
 		
 		
 		//default constructor
 		public VDriver() {
 			super();
-			this.driverId = "D????";
+			this.driverId = 0;
 			this.assignedVehicle = new Vehicle();
 			this.license = new DriverLicense();
 		}
 		
 		//primary constructor
-		public VDriver(String firstName, String lastName, Date dob, int age, String nationalId, Address address, String telNum, String username, String password, String email, String driverId, Vehicle assignedVehicle, DriverLicense license) {
+		public VDriver(String firstName, String lastName, Date dob, int age, String nationalId, Address address, String telNum, String username, String password, String email, long driverId, Vehicle assignedVehicle, DriverLicense license) {
 			super( firstName,  lastName,  dob,  age,  nationalId,  address,  telNum,  username,  password,  email);
 			this.driverId = driverId;
 			this.assignedVehicle = assignedVehicle;
 			this.license = license;
+		}
+		
+		//primary constructor - 2
+		public VDriver(String firstName, String lastName, Date dob, int age, String nationalId, Address address, String telNum, String username, String password, String email) {
+			super(firstName,lastName, dob, age, nationalId, address, telNum,  username,  password,  email);
 		}
 
 		//COPY constructor
@@ -42,11 +57,11 @@ public class VDriver extends User implements Serializable {
 		}
 
 		//Setter and getters
-		public String getDriverId() {
+		public long getDriverId() {
 			return this.driverId;
 		}
 
-		public void setDriverId(String driverId) {
+		public void setDriverId(long driverId) {
 			this.driverId = driverId;
 		}
 

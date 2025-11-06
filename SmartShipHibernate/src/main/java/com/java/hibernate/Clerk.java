@@ -7,22 +7,31 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+@Entity
+@Table(name = "Clerk") //name of the table in the database
 public class Clerk extends User implements Serializable {
 
 	private static final long serialVersionUID = 1L;
+	@Id
+	@Column(name= "clerkId")
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	
-	private String clerkId;
+	private long clerkId;
 	
 	//default constructor
 	public Clerk() {
 		super();
-		this.clerkId = "CL????";
+		this.clerkId = 0L;
 	}
 			
 	//primary constructor
-	public Clerk(String firstName, String lastName, Date dob, int age, String nationalId, Address address, String telNum, String username, String password, String email, String clerkId) {
+	public Clerk(String firstName, String lastName, Date dob, int age, String nationalId, Address address, String telNum, String username, String password, String email, long clerkId) {
 		super(firstName,lastName, dob, age, nationalId, address, telNum, username, password, email);
 		this.clerkId = clerkId;
+	}
+	//primary constructor - 2
+	public Clerk(String firstName, String lastName, Date dob, int age, String nationalId, Address address, String telNum, String username, String password, String email) {
+		super(firstName,lastName, dob, age, nationalId, address, telNum,  username,  password,  email);
 	}
 			
 	//Copy constructor
@@ -33,11 +42,11 @@ public class Clerk extends User implements Serializable {
 	
 	//setters and getters
 			
-	public String getClerkId() {
+	public long getClerkId() {
 		return this.clerkId;
 	}
 
-	public void setClerkId(String clerkId) {
+	public void setClerkId(int clerkId) {
 		this.clerkId = clerkId;
 	}
 

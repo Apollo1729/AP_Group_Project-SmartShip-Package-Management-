@@ -8,6 +8,16 @@ public class UserManager implements UserManagement {
 	
 	private static SessionFactory sessionFactory = null;
 	
+	public static void main(String[] args) {
+		UserManager manager = new UserManager();
+		//Customer cus1 = new Customer("Asher", "Maxwell", new Date(7,8,2002), 23, "12345678", new Address("Jamaica", "Fairview", "Montego Bay", "St.James", "JMCJS13"), "876-123-4567", "ashmax", "12345", "ashermaxwell@gmail.com", "Card");
+		
+		new Application();
+		
+	//	manager.signUp(cus1);
+		manager.exit();
+	}
+	
 	public UserManager() {
 		sessionFactory = buildSessionFactory();
 	}
@@ -57,14 +67,69 @@ public class UserManager implements UserManagement {
 
 	}
 	
-	public static void main(String[] args) {
-		UserManager manager = new UserManager();
-		//Customer cus1 = new Customer("Asher", "Maxwell", new Date(7,8,2002), 23, "12345678", new Address("Jamaica", "Fairview", "Montego Bay", "St.James", "JMCJS13"), "876-123-4567", "ashmax", "12345", "ashermaxwell@gmail.com", "Card");
+
+
+	@Override
+	public void signUp(Manager manager) {
+		Session session = sessionFactory.openSession();
+		session.beginTransaction();
+		session.persist(manager);
+		session.getTransaction().commit();
+		session.close();		
+	}
+
+	@Override
+	public void login(Manager manager) {
+		// TODO Auto-generated method stub
 		
-		new Application();
+	}
+
+	@Override
+	public void update(Manager manager) {
+		// TODO Auto-generated method stub
 		
-	//	manager.signUp(cus1);
-		manager.exit();
+	}
+
+	@Override
+	public void signUp(Clerk clerk) {
+		Session session = sessionFactory.openSession();
+		session.beginTransaction();
+		session.persist(clerk);
+		session.getTransaction().commit();
+		session.close();		
+	}
+
+	@Override
+	public void login(Clerk clerk) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void update(Clerk clerk) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void signUp(VDriver driver) {
+		Session session = sessionFactory.openSession();
+		session.beginTransaction();
+		session.persist(driver);
+		session.getTransaction().commit();
+		session.close();		
+	}
+
+	@Override
+	public void login(VDriver driver) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void update(VDriver driver) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }
