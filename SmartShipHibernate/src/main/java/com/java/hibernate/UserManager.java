@@ -10,11 +10,7 @@ public class UserManager implements UserManagement {
 	
 	public static void main(String[] args) {
 		UserManager manager = new UserManager();
-		//Customer cus1 = new Customer("Asher", "Maxwell", new Date(7,8,2002), 23, "12345678", new Address("Jamaica", "Fairview", "Montego Bay", "St.James", "JMCJS13"), "876-123-4567", "ashmax", "12345", "ashermaxwell@gmail.com", "Card");
-		
 		new Application();
-		
-	//	manager.signUp(cus1);
 		manager.exit();
 	}
 	
@@ -67,7 +63,6 @@ public class UserManager implements UserManagement {
 
 	}
 	
-
 
 	@Override
 	public void signUp(Manager manager) {

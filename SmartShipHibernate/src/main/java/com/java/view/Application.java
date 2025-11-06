@@ -163,35 +163,43 @@ public class Application extends JFrame {
 		switch(switchVal) {
 		
 		case 1:
-				//register in the customer database
-				//redirect to the customer interface
+			//register in the customer database
+			//close the sign up form
+			//redirect to the customer interface
 			break;
 		case 2:
 			//register in the customer database
+			//close the sign up form
 			//redirect to the customer interface
 			break;
 		case 3:
 			//register in the customer database
+			//close the sign up form
 			//redirect to the customer interface
 			break;
 		case 4:
 			//register in the customer database
+			//close the sign up form
 			//redirect to the customer interface
 			break;
 		case 5:
 			//register in the customer database
+			//close the sign up form
 			//redirect to the customer interface
 			break;
 		case 6:
 			//register in the customer database
+			//close the sign up form
 			//redirect to the customer interface
 			break;
 		case 7:
 			//register in the customer database
+			//close the sign up form
 			//redirect to the customer interface
 			break;
 		case 8:
 			//register in the customer database
+			//close the sign up form
 			//redirect to the customer interface
 			break;
 		case 9:
@@ -245,7 +253,6 @@ public class Application extends JFrame {
 	
 
 	
-	
 	//This method is used to create a sign up internal frame to be used in the constructor
 	public void signUpFrame(String title,  int width, int height) {
 		
@@ -257,12 +264,6 @@ public class Application extends JFrame {
 		//Layouts and constraints		
 		signUpFrame.setLayout(new GridBagLayout());
 		GridBagConstraints gbc = new GridBagConstraints();
-		
-		//Making an Array of email domain extensions that we allow
-		//ArrayList<String> emailExt = new ArrayList<>();
-		
-		
-		
 
 		
 		//Labels
@@ -606,13 +607,10 @@ public class Application extends JFrame {
 				String firstName = firstNameTextField.getText().trim();
 				String lastName = lastNameTextField.getText().trim();
 				
-				
 				String dayS = dayTextField.getText().trim();
 				String monthS = monthTextField.getText().trim();
 				String yearS = yearTextField.getText().trim();
 				String ageS = ageTextField.getText().trim();
-				
-
 				
 				String nationalId = nationalIdTextField.getText().trim();
 				String country = countryTextField.getText().trim();
