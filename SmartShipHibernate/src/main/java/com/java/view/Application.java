@@ -97,6 +97,7 @@ public class Application extends JFrame {
 
 	}
 
+	
 	//recursive method to track the number of tries left for the secret code
 	public int triesTracker(int tries){
 		
@@ -107,7 +108,8 @@ public class Application extends JFrame {
 		return triesTracker(tries - 1);
 	}
 	
-	//responsible for prompting the user for a special code and converting the string to a integer.
+	
+	//Method responsible for prompting the user for a special code and converting the string to a integer.
 	public int jConvert() {
 		
 		String code = JOptionPane.showInputDialog("Enter the secret code!");
@@ -118,6 +120,8 @@ public class Application extends JFrame {
 	}//end of jConvert method
 	
 	
+	//Method used to check if the email entered by the user is valid.
+	//Additionaly, method used to also redirect the manager and  
 	public int emailCheck(JTextField jEmail) { //taking the email textfield as an arguments
 			
 		String[] emailExt = {"@gmail.com", "@yahoo.com", "@outlook.com", "@hotmail.com", "@icloud.com", "@zoho.com", "@proton.me", "@protonmail.com", "@tutanota.com "};
@@ -137,8 +141,7 @@ public class Application extends JFrame {
 			switchVal = 1;
 		}else if(email.contains(emailExt[1])){
 			switchVal = 2;
-		}
-		else if(email.contains(emailExt[2])){
+		}else if(email.contains(emailExt[2])){
 			switchVal = 3;
 		}else if(email.contains(emailExt[3])){
 			switchVal = 4;
@@ -163,58 +166,30 @@ public class Application extends JFrame {
 		switch(switchVal) {
 		
 		case 1:
-			//register in the customer database
-			//close the sign up form
-			//redirect to the customer interface
-			break;
+			return 1;
 		case 2:
-			//register in the customer database
-			//close the sign up form
-			//redirect to the customer interface
-			break;
+			return 1;
 		case 3:
-			//register in the customer database
-			//close the sign up form
-			//redirect to the customer interface
-			break;
+			return 1;
 		case 4:
-			//register in the customer database
-			//close the sign up form
-			//redirect to the customer interface
-			break;
+			return 1;
 		case 5:
-			//register in the customer database
-			//close the sign up form
-			//redirect to the customer interface
-			break;
+			return 1;
 		case 6:
-			//register in the customer database
-			//close the sign up form
-			//redirect to the customer interface
-			break;
+			return 1;
 		case 7:
-			//register in the customer database
-			//close the sign up form
-			//redirect to the customer interface
-			break;
+			return 1;
 		case 8:
-			//register in the customer database
-			//close the sign up form
-			//redirect to the customer interface
-			break;
+			return 1;
 		case 9:
-			//register in the customer database
-			//close the sign up form
-			//redirect to the customer interface
-			break;
+			return 1;
 		case 10:
 			//prompt for the staff registration code(security against unauthorized creation of a staff account)
-			
 			returnedCode = jConvert();
 			if (returnedCode == staffCode){
 				return 2;
 			}else {
-				for(tries = 3; tries >= 0; tries--) {
+				for(tries = 3; tries >= 1; tries--) {
 					System.out.println("\nYou have [" + remainder + "] tries left.");
 					returnedCode = jConvert();
 				}
@@ -230,7 +205,7 @@ public class Application extends JFrame {
 			if (returnedCode == mngCode){
 				return 3;
 			}else {
-				for(tries = 3; tries >= 0; tries--) {
+				for(tries = 3; tries >= 1; tries--) {
 					System.out.println("\nYou have [" + remainder + "] tries left.");
 					returnedCode = jConvert();
 				}
@@ -238,18 +213,139 @@ public class Application extends JFrame {
 			break;
 			
 			default :
-				
 				JOptionPane.showMessageDialog(
 						signUpFrame, 
 						"You did not enter a supported email domain extension", 
 						"Create Status", 
 						JOptionPane.ERROR_MESSAGE);
-				return -1;
 				
+					String correctEmail = JOptionPane.showInputDialog("Enter an email with a supported extension.");
+					emailTextField.setText(correctEmail);
+					
+				//return -1;
 		}//end of customer switch
 		
-		return 0;
-	}
+		return -1;
+	}//end of emailCheck
+	
+	
+	//Method used to get the information inputed by the user in the Sign up Frame
+    public void getFrameInfo() {
+    	
+    	//String id = idTextField.getText().trim();
+		String firstName = firstNameTextField.getText().trim();
+		String lastName = lastNameTextField.getText().trim();
+		
+		String dayS = dayTextField.getText().trim();
+		String monthS = monthTextField.getText().trim();
+		String yearS = yearTextField.getText().trim();
+		//String ageS = ageTextField.getText().trim();
+		
+		String nationalId = nationalIdTextField.getText().trim();
+		String country = countryTextField.getText().trim();
+		String street = streetTextField.getText().trim();
+		String city = cityTextField.getText().trim();
+		String state = stateTextField.getText().trim();
+		String zipCode = zipCodeTextField.getText().trim();
+		String username = usernameTextField.getText().trim();
+		String password = passwordTextField.getText().trim();
+		String email = emailTextField.getText().trim();
+		String telNum = telNumTextField.getText().trim();
+		String paymentMethod = "?";
+    	
+    	if (firstName.isEmpty() || lastName.isEmpty() || nationalId.isEmpty() || country.isEmpty() || street.isEmpty()
+				|| city.isEmpty() || state.isEmpty() || zipCode.isEmpty() || username.isEmpty()|| email.isEmpty() || password.isEmpty() 
+				|| telNum.isEmpty() || dayS.isEmpty() || monthS.isEmpty() || yearS.isEmpty()){
+			JOptionPane.showMessageDialog(
+					signUpFrame, 
+					"Data missing. Fill in all fields", 
+					"Create Status", 
+					JOptionPane.ERROR_MESSAGE);
+			return;
+		}
+    	
+    	//parse the data once we know that the data field is not void/empty
+		int day = Integer.parseInt(dayS);
+		int month = Integer.parseInt(monthS);
+		int year = Integer.parseInt(yearS);
+		
+		//calulation for the age of the user
+		int currentYear = java.time.LocalDate.now().getYear();
+		int age = currentYear - year;
+		
+		String ageConvertString = Integer.toString(age); //converts age to string to be passed to the text Fi
+		
+		ageTextField.setText(ageConvertString); //sets the converted age value to the age text field
+		
+		retrievePreviousId(); //function used to show the user their current id number inn the id text field 
+		
+		//assigns the returned integer value from the emailCheck method to determine which table to store the current user
+		int returnedEmailCheckVal = emailCheck(emailTextField); 
+		
+		switch(returnedEmailCheckVal) {
+		
+		case 2:
+			//creates a Clerk in the database
+			boolean clerkIsAdded = create(new Clerk( firstName, lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email));
+			if (clerkIsAdded) {
+				JOptionPane.showMessageDialog(
+						signUpFrame, 
+						"Clerk Record added", 
+						"Create Status", 
+						JOptionPane.INFORMATION_MESSAGE);
+			}
+			break;
+				
+		case 3:
+			//creates a Manager in the database
+			boolean manIsAdded = create(new Manager( firstName,  lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email));
+			if (manIsAdded) {
+				JOptionPane.showMessageDialog(
+						signUpFrame, 
+						"Manager Record added", 
+						"Create Status", 
+						JOptionPane.INFORMATION_MESSAGE);
+			}
+			break;
+		case 1:
+			//creates a Customer in the database
+			boolean cusIsAdded = create(new Customer( firstName,  lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email,  paymentMethod));
+			if (cusIsAdded) {
+				JOptionPane.showMessageDialog(
+						signUpFrame, 
+						"Customer Record added", 
+						"Create Status", 
+						JOptionPane.INFORMATION_MESSAGE);
+			}
+			break;
+			
+		case 4:
+			//creates a Driver in the database
+			boolean driverIsAdded = create(new VDriver( firstName,  lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email));
+			if (driverIsAdded) {
+				JOptionPane.showMessageDialog(
+						signUpFrame, 
+						"Driver Record added", 
+						"Create Status", 
+						JOptionPane.INFORMATION_MESSAGE);
+			}
+			break;
+			
+		case -1:
+			//closes the sign up frame and creates a new frame is the user did not enter a supported extension
+			try {
+				signUpFrame.setClosed(true);
+				signUpFrame("Sign Up", 600, 700);
+			} catch (PropertyVetoException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			break;
+
+		}//end of switch
+    	
+    }//end of getFrameInfo
+
 	
 
 	
@@ -600,122 +696,14 @@ public class Application extends JFrame {
         // Add to desktop pane
         desktop.add(signUpFrame);
         
+        
         signUpBtn.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String id = idTextField.getText().trim();
-				String firstName = firstNameTextField.getText().trim();
-				String lastName = lastNameTextField.getText().trim();
 				
-				String dayS = dayTextField.getText().trim();
-				String monthS = monthTextField.getText().trim();
-				String yearS = yearTextField.getText().trim();
-				String ageS = ageTextField.getText().trim();
-				
-				String nationalId = nationalIdTextField.getText().trim();
-				String country = countryTextField.getText().trim();
-				String street = streetTextField.getText().trim();
-				String city = cityTextField.getText().trim();
-				String state = stateTextField.getText().trim();
-				String zipCode = zipCodeTextField.getText().trim();
-				String username = usernameTextField.getText().trim();
-				String password = passwordTextField.getText().trim();
-				String email = emailTextField.getText().trim();
-				String telNum = telNumTextField.getText().trim();
-				String paymentMethod = "?";
-				
-				if (firstName.isEmpty() || lastName.isEmpty() || nationalId.isEmpty() || country.isEmpty() || street.isEmpty()
-						|| city.isEmpty() || state.isEmpty() || zipCode.isEmpty() || username.isEmpty()|| email.isEmpty() || password.isEmpty() 
-						|| telNum.isEmpty() || dayS.isEmpty() || monthS.isEmpty() || yearS.isEmpty()){
-					JOptionPane.showMessageDialog(
-							signUpFrame, 
-							"Data missing. Fill in all fields", 
-							"Create Status", 
-							JOptionPane.ERROR_MESSAGE);
-					return;
-				}
-				
-				
-			
-				//parse the data once we know that the data field is not void
-				int day = Integer.parseInt(dayS);
-				int month = Integer.parseInt(monthS);
-				int year = Integer.parseInt(yearS);
-				
-				//calulation for the age of the user
-				int currentYear = java.time.LocalDate.now().getYear();
-				int age = currentYear - year;
-				
-				String ageConvertString = Integer.toString(age);
-				
-				ageTextField.setText(ageConvertString);
-				
-				retrievePreviousId();
-				
-				int returnedEmailCheckVal = emailCheck(emailTextField);
-				
-				switch(returnedEmailCheckVal) {
-				
-				case 2:
-					//this is the method that create a specific user
-					boolean clerkIsAdded = create(new Clerk( firstName, lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email));
-					if (clerkIsAdded) {
-						JOptionPane.showMessageDialog(
-								signUpFrame, 
-								"Clerk Record added", 
-								"Create Status", 
-								JOptionPane.INFORMATION_MESSAGE);
-					}
-					break;
-						
-				case 3:
-					//this is the method that create a specific user
-					boolean manIsAdded = create(new Manager( firstName,  lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email));
-					if (manIsAdded) {
-						JOptionPane.showMessageDialog(
-								signUpFrame, 
-								"Manager Record added", 
-								"Create Status", 
-								JOptionPane.INFORMATION_MESSAGE);
-					}
-					break;
-				case 1:
-					//this is the method that create a specific user
-					boolean cusIsAdded = create(new Customer( firstName,  lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email,  paymentMethod));
-					if (cusIsAdded) {
-						JOptionPane.showMessageDialog(
-								signUpFrame, 
-								"Customer Record added", 
-								"Create Status", 
-								JOptionPane.INFORMATION_MESSAGE);
-					}
-					break;
-					
-				case 4:
-					//this is the method that create a specific user
-					boolean driverIsAdded = create(new VDriver( firstName,  lastName, new Date(day, month, year) , age,  nationalId, new Address(country, street, city, state, zipCode),  telNum,  username,  password,  email));
-					if (driverIsAdded) {
-						JOptionPane.showMessageDialog(
-								signUpFrame, 
-								"Driver Record added", 
-								"Create Status", 
-								JOptionPane.INFORMATION_MESSAGE);
-					}
-					break;
-					
-				case -1:
-					try {
-						signUpFrame.setClosed(true);
-						signUpFrame("Sign Up", 600, 700);
-					} catch (PropertyVetoException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-					break;
-	
-				}//end of switch
-				
-
+				autoGenerateInfo();
+				getFrameInfo();
+				//emailCheck(emailTextField);
 			}//end of action performed
 		});
         
@@ -813,6 +801,7 @@ public class Application extends JFrame {
       				signUpFrame("Sign Up", 600, 700);
       			}
       	});//End of sign-up button action listener 
+      
 	}//End of loginFram 
 	
 	
@@ -940,24 +929,126 @@ public class Application extends JFrame {
 		return false;
 	}
 	
+	//Method used to retrieve the previous id of a perosn in aspecific database
 	protected void retrievePreviousId() {
-		String sql = "SELECT MAX(cusId) AS lastId FROM Customer;";
-		try {
-			//System.out.println(sql);
-			stmt = dbConn.createStatement();
-			result = stmt.executeQuery(sql);
-			if (result.next()) {
-				int lastId = result.getInt("lastId"); // get the highest cusId
-	            int nextId = lastId + 1;              // next ID value
-	            idTextField.setText(String.valueOf(nextId));
-			}else {
-				idTextField.setText("1");
-			}
+		String sqlCus = "SELECT MAX(cusId) AS lastId FROM Customer;";
+		String sqlClerk = "SELECT MAX(clerkId) AS lastId FROM Clerk;";
+		String sqlDriver = "SELECT MAX(driverId) AS lastId FROM Driver;";
+		String sqlManager = "SELECT MAX(mngId) AS lastId FROM Manager;";
 		
-		} catch (SQLSyntaxErrorException e) {
-			System.err.println(e.getMessage());
-		} catch (SQLException e) {
-			e.printStackTrace();
+		int sqlPicker = emailCheck(emailTextField);
+		
+		switch(sqlPicker) {
+		case 1:
+			try {
+				//System.out.println(sql);
+				stmt = dbConn.createStatement();
+				result = stmt.executeQuery(sqlCus);
+				if (result.next()) {
+					int lastId = result.getInt("lastId"); // get the highest cusId
+		            int nextId = lastId + 1;              // next ID value
+		            idTextField.setText(String.valueOf(nextId));
+				}else {
+					idTextField.setText("1");
+				}
+			
+			} catch (SQLSyntaxErrorException e) {
+				System.err.println(e.getMessage());
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			break;
+		case 2:
+			try {
+				//System.out.println(sql);
+				stmt = dbConn.createStatement();
+				result = stmt.executeQuery(sqlClerk);
+				if (result.next()) {
+					int lastId = result.getInt("lastId"); // get the highest cusId
+		            int nextId = lastId + 1;              // next ID value
+		            idTextField.setText(String.valueOf(nextId));
+				}else {
+					idTextField.setText("1");
+				}
+			
+			} catch (SQLSyntaxErrorException e) {
+				System.err.println(e.getMessage());
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			break;
+		case 3:
+			try {
+				//System.out.println(sql);
+				stmt = dbConn.createStatement();
+				result = stmt.executeQuery(sqlDriver);
+				if (result.next()) {
+					int lastId = result.getInt("lastId"); // get the highest cusId
+		            int nextId = lastId + 1;              // next ID value
+		            idTextField.setText(String.valueOf(nextId));
+				}else {
+					idTextField.setText("1");
+				}
+			
+			} catch (SQLSyntaxErrorException e) {
+				System.err.println(e.getMessage());
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			break;
+		case 4:
+			try {
+				//System.out.println(sql);
+				stmt = dbConn.createStatement();
+				result = stmt.executeQuery(sqlManager);
+				if (result.next()) {
+					int lastId = result.getInt("lastId"); // get the highest cusId
+		            int nextId = lastId + 1;              // next ID value
+		            idTextField.setText(String.valueOf(nextId));
+				}else {
+					idTextField.setText("1");
+				}
+			
+			} catch (SQLSyntaxErrorException e) {
+				System.err.println(e.getMessage());
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
 		}
+		
+	}//end of retrieveId 
+	
+	
+	//#---------------------------------------------------------------------------------------------------------------------------#
+	//DEBUGGING METHODS
+	
+	public  void autoGenerateInfo() {
+		//String id = idTextField.getText().trim();
+				firstNameTextField.setText("Asher");
+				lastNameTextField.setText("Maxwell");
+				
+				
+				dayTextField.setText("10");
+				monthTextField.setText("7");
+				yearTextField.setText("2002");
+				//String ageS = ageTextField.getText().trim();
+				
+				nationalIdTextField.setText("846454923");
+				countryTextField.setText("Jamaica");
+				streetTextField.setText("Street");
+				cityTextField.setText("City");
+				stateTextField.setText("State");
+				zipCodeTextField.setText("JMCJS13");
+				usernameTextField.setText("AshMax");
+				passwordTextField.setText("maxwell23");
+				
+				String emailAuto = JOptionPane.showInputDialog("Enter a valid email address");
+				emailTextField.setText(emailAuto);
+				
+				telNumTextField.setText("876-233-4372");
+				String paymentMethod = "?";
+				
+			
 	}
+	
 }//end of classs
