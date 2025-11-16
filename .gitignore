@@ -1,0 +1,32 @@
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+.metadata
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+
+# Build
+build/
+dist/
+
+# Log files
+*.log
+
+# Package Files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# OS
+.DS_Store
+Thumbs.db
