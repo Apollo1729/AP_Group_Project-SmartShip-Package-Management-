@@ -81,7 +81,7 @@ public class LoginFrame extends JFrame {
         panel.add(Box.createRigidArea(new Dimension(0, 40)));
 
         // ID label
-        JLabel idLabel = new JLabel("Enter ID:");
+        JLabel idLabel = new JLabel("Enter Username:");
         idLabel.setFont(new Font("Arial", Font.BOLD, 12));
         idLabel.setForeground(new Color(52, 73, 94));
         idLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
