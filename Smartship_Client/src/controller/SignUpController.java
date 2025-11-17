@@ -68,6 +68,8 @@ public class SignUpController {
             out.writeObject(address);
             out.flush();
             
+            out.writeObject(role);
+            out.flush();
             // Read response from server
             Object response = in.readObject();
             
