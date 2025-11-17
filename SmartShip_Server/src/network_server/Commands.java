@@ -32,9 +32,10 @@ public class Commands {
             String email = (String) in.readObject();
             String phone = (String) in.readObject();
             String address = (String) in.readObject();
+            String role = (String) in.readObject();
             
             // Pass it to the database to create the account
-            return DatabaseHelper.registerUser(username, password, email, phone, address);
+            return DatabaseHelper.registerUser(username, password, email, phone, address,role);
         }
     }
     
