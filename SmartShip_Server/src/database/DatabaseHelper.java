@@ -29,9 +29,9 @@ public class DatabaseHelper {
      * 
      * @return true if registration succeeded, false if it failed
      */
-    public static boolean registerUser(String username, String password, String email, String phone, String address) {
+    public static boolean registerUser(String username, String password, String email, String phone, String address , String role) {
         // SQL query with ? placeholders to prevent SQL injection
-        String sql = "INSERT INTO users (username, password, email, phone, address, role) VALUES (?, ?, ?, ?, ?, 'Customer')";
+        String sql = "INSERT INTO users (username, password, email, phone, address, role) VALUES (?, ?, ?, ?, ?, ?)";
         
         // try-with-resources automatically closes the connection and statement
         try (Connection conn = getConnection();
@@ -43,7 +43,7 @@ public class DatabaseHelper {
             stmt.setString(3, email);
             stmt.setString(4, phone);
             stmt.setString(5, address);
-            
+            stmt.setString(6, role);
             // executeUpdate returns number of rows affected
             // If > 0, the insert worked
             return stmt.executeUpdate() > 0;
