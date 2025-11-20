@@ -12,7 +12,7 @@ public class DatabaseHelper {
     // Database connection info
     private static final String URL = "jdbc:mysql://localhost:3307/sspms";
     private static final String USER = "root";
-    private static final String PASSWORD = "usbw";
+    private static final String PASSWORD = "";
     
     /**
      * Creates a connection to the database.
