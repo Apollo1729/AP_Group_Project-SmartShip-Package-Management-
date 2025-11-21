@@ -49,7 +49,7 @@ public class DriverFrame extends JFrame {
 	        mainPanel.setBackground(new Color(249, 249, 249));
 	        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-	        JPanel welcTab = createDriverPanel();
+	        JPanel welcTab = createDriverPanel(user);
 	        JPanel btnTab = createBtnPanel();
 	        
 	        mainPanel.add(welcTab,BorderLayout.CENTER);
@@ -61,7 +61,7 @@ public class DriverFrame extends JFrame {
 	        setVisible(true);
 	    }
 		
-		public JPanel createDriverPanel()
+		public JPanel createDriverPanel(User user)
 		{
 			JPanel panel = new JPanel();
 			 panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -69,7 +69,7 @@ public class DriverFrame extends JFrame {
 		     panel.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 20));
 		     //panel.setPreferredSize(new Dimension(400, getHeight()));
 		     
-		     JLabel welcomeDriver = new JLabel("Welcome Driver -First Name-");
+		     JLabel welcomeDriver = new JLabel("Welcome Driver " + user.getUsername());
 		     welcomeDriver.setFont(new Font("Arial", Font.BOLD, 32));
 		     welcomeDriver.setForeground(new Color(52, 73, 94));
 		     welcomeDriver.setAlignmentX(Component.CENTER_ALIGNMENT);
