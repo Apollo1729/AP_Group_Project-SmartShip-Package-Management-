@@ -2,6 +2,8 @@ package network_server;
 
 import database.DatabaseHelper;
 import java.io.ObjectInputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Command interface that all command classes implement.
@@ -82,24 +84,8 @@ public class Commands {
         }
     }
     
-    /**
-     * CREATE SHIPMENT Command - customer creates a new delivery order
-     * Reads: userId, sender info, recipient info, weight, dimensions, type, zone
-     * Returns: the new shipment object with tracking number
-     */
-    public static class CreateShipmentCommand implements Command {
-        @Override
-        public Object execute(ObjectInputStream in) throws Exception {
-            int userId = (int) in.readObject();
-            String senderInfo = (String) in.readObject();
-            String recipientInfo = (String) in.readObject();
-            double weight = (double) in.readObject();
-            String dimensions = (String) in.readObject();
-            String type = (String) in.readObject();
-            int zone = (int) in.readObject();
-            return DatabaseHelper.createShipment(userId, senderInfo, recipientInfo, weight, dimensions, type, zone);
-        }
-    }
+    
+    
     
     /**
      * GET CUSTOMER ORDERS Command - shows all shipments for a customer
@@ -119,14 +105,7 @@ public class Commands {
      * Reads: shipmentId, paymentMethod (e.g. "credit card", "cash")
      * Returns: payment confirmation or receipt
      */
-    public static class MakePaymentCommand implements Command {
-        @Override
-        public Object execute(ObjectInputStream in) throws Exception {
-            int shipmentId = (int) in.readObject();
-            String paymentMethod = (String) in.readObject();
-            return DatabaseHelper.makePayment(shipmentId, paymentMethod);
-        }
-    }
+  
     
     /**
      * GET PENDING SHIPMENTS Command - for managers to see what needs delivery
@@ -192,4 +171,120 @@ public class Commands {
             return DatabaseHelper.generateDailyReport();
         }
     }
+
+
+ /**
+  * TRACK PACKAGE Command - Customer tracks their package
+  * Reads: trackingNumber
+  * Returns: shipment details map
+  */
+ public static class TrackPackageCommand implements Command {
+     @Override
+     public Object execute(ObjectInputStream in) throws Exception {
+         String trackingNumber = (String) in.readObject();
+         return DatabaseHelper.getShipmentByTrackingNumber(trackingNumber);
+     }
+ }
+
+ /**
+  * GET CUSTOMER INVOICES Command - Retrieve all invoices for a customer
+  * Reads: userId
+  * Returns: list of invoice maps
+  */
+ public static class GetCustomerInvoicesCommand implements Command {
+     @Override
+     public Object execute(ObjectInputStream in) throws Exception {
+         int userId = (int) in.readObject();
+         return DatabaseHelper.getCustomerInvoices(userId);
+     }
+ }
+
+ /**
+  * MAKE PAYMENT Command - Process payment for an invoice
+  * Reads: invoiceId, amount, paymentMethod
+  * Returns: success/failure
+  */
+ public static class MakePaymentCommand implements Command {
+     @Override
+     public Object execute(ObjectInputStream in) throws Exception {
+         int invoiceId = (int) in.readObject();
+         double amount = (double) in.readObject();
+         String paymentMethod = (String) in.readObject();
+         return DatabaseHelper.makeInvoicePayment(invoiceId, amount, paymentMethod);
+     }
+ }
+
+ /**
+  * CREATE SHIPMENT Command 
+  * Now also stores recipient address in shipments table
+  * Reads: userId, senderInfo, recipientInfo, weight, dimensions, type, zone, recipientAddress
+  * Returns: tracking number
+  */
+ public static class CreateShipmentCommand implements Command {
+     @Override
+     public Object execute(ObjectInputStream in) throws Exception {
+         int userId = (int) in.readObject();
+         String senderInfo = (String) in.readObject();
+         String recipientInfo = (String) in.readObject();
+         double weight = (double) in.readObject();
+         String dimensions = (String) in.readObject();
+         String type = (String) in.readObject();
+         int zone = (int) in.readObject();
+         String recipientAddress = (String) in.readObject();
+         return DatabaseHelper.createShipment(userId, senderInfo, recipientInfo, weight, dimensions, type, zone, recipientAddress);
+     }
+ }
+ 
+ /**
+  * MAKE PAYMENT AND GET RECEIPT Command
+  * Processes payment for an invoice and returns receipt details
+  * Reads: invoiceId, amount, paymentMethod
+  * Returns: Map containing receipt information
+  */
+ public static class MakePaymentAndGetReceiptCommand implements Command {
+     @Override
+     public Object execute(ObjectInputStream in) throws Exception {
+         int invoiceId = (int) in.readObject();
+         double amount = (double) in.readObject();
+         String paymentMethod = (String) in.readObject();
+         
+         System.out.println("Processing payment for invoice: " + invoiceId);
+         
+         // Make the payment (transactional in DatabaseHelper)
+         boolean paymentSuccess = DatabaseHelper.makeInvoicePayment(invoiceId, amount, paymentMethod);
+         
+         if (!paymentSuccess) {
+             System.err.println("Payment transaction failed for invoice: " + invoiceId);
+             return null;
+         }
+         
+         System.out.println("Payment successful. Building receipt...");
+         
+         // Retrieve invoice and shipment details
+         Map<String, String> receiptDetails = DatabaseHelper.getInvoiceAndShipmentDetails(invoiceId);
+         
+         if (receiptDetails == null) {
+             System.err.println("Failed to retrieve receipt details for invoice: " + invoiceId);
+             return null;
+         }
+         
+         // Build complete receipt map
+         Map<String, String> receipt = new HashMap<>();
+         receipt.put("paymentId", "PAY" + System.currentTimeMillis());
+         receipt.put("invoiceId", String.valueOf(invoiceId));
+         receipt.put("trackingNumber", receiptDetails.get("trackingNumber"));
+         receipt.put("customerName", receiptDetails.get("customerName"));
+         receipt.put("email", receiptDetails.get("email"));
+         receipt.put("address", receiptDetails.get("address"));
+         receipt.put("paymentMethod", paymentMethod);
+         receipt.put("amount", String.format("%.2f", amount));
+         receipt.put("paymentDate", new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
+         receipt.put("status", receiptDetails.get("status"));
+         
+         System.out.println("Receipt built successfully");
+         return receipt;
+     }
+ }
+
+    
 }

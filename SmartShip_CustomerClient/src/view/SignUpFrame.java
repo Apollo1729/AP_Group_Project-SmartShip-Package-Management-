@@ -6,7 +6,6 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -65,7 +64,7 @@ public class SignUpFrame extends JFrame {
         welcomeLabel1.setForeground(new Color(52, 73, 94));
         welcomeLabel1.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel welcomeLabel2 = new JLabel("Join SmartShip Management System");
+        JLabel welcomeLabel2 = new JLabel("Join SmartShip as a Customer");
         welcomeLabel2.setFont(new Font("Arial", Font.PLAIN, 14));
         welcomeLabel2.setForeground(new Color(52, 73, 94));
         welcomeLabel2.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -109,29 +108,10 @@ public class SignUpFrame extends JFrame {
         ));
         passwordField.setBackground(Color.WHITE);
         panel.add(passwordField);
-        panel.add(Box.createRigidArea(new Dimension(0, 15)));
-
-        // Role selection
-        JLabel roleLabel = new JLabel("Select Role:");
-        roleLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        roleLabel.setForeground(new Color(52, 73, 94));
-        roleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(roleLabel);
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-
-        String[] roles = {"Customer", "Clerk", "Driver", "Manager"};
-        JComboBox<String> roleComboBox = new JComboBox<>(roles);
-        roleComboBox.setPreferredSize(new Dimension(300, 40));
-        roleComboBox.setMaximumSize(new Dimension(300, 40));
-        roleComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
-        roleComboBox.setBackground(Color.WHITE);
-        roleComboBox.setFont(new Font("Arial", Font.PLAIN, 12));
-        roleComboBox.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(236, 240, 241)),
-            BorderFactory.createEmptyBorder(5, 5, 5, 5)
-        ));
-        panel.add(roleComboBox);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
+        panel.add(Box.createRigidArea(new Dimension(0, 30)));
+        
+        // REMOVED: Role selection section - Customers are always registered as "Customer"
+        // No need for a role dropdown
 
         // Sign Up button
         JButton signUpButton = new JButton("Sign Up");
@@ -150,7 +130,7 @@ public class SignUpFrame extends JFrame {
             String email = emailField.getText().trim();
             String phone = phoneField.getText().trim();
             String address = addressField.getText().trim();
-            String role = (String) roleComboBox.getSelectedItem();
+            String role = "Customer"; // HARDCODED - always register as Customer
             
             // Create controller and register
             SignUpController controller = new SignUpController();

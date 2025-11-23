@@ -181,41 +181,12 @@ public class LoginFrame extends JFrame {
         User user = controller.authenticate(username, password);
         
         if (user != null) {
-            // Login successful - route to appropriate frame based on role
-            String role = user.getRole();
-            
             setVisible(false);
             dispose();
             
-            switch (role) {
-                case "Customer":
-                    // Open Customer Frame
-                    new CustomerFrame(user);
-                    System.out.println("Opening Customer Frame for: " + user.getUsername());
-                    break;
-                    
-                case "Clerk":
-                    // Open Clerk Frame
-                    new ClerkFrame(user);
-                    System.out.println("Opening Clerk Frame for: " + user.getUsername());
-                    break;
-                    
-                case "Driver":
-                    // Open Driver Frame
-                    new DriverFrame(user);
-                    System.out.println("Opening Driver Frame for: " + user.getUsername());
-                    break;
-                    
-                case "Manager":
-                    // Open Manager Frame
-                    new ManagerFrame(user);
-                    System.out.println("Opening Manager Frame for: " + user.getUsername());
-                    break;
-                    
-                default:
-                    System.out.println("Unknown role: " + role);
-                    break;
-            }
+            // For Customer Client, only open CustomerFrame
+            new CustomerFrame(user);
+            System.out.println("Opening Customer Frame for: " + user.getUsername());
         }
         // If user is null, error message already shown by controller
     }

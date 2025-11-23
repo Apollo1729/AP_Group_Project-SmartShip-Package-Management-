@@ -20,14 +20,17 @@ public class CommandRegistry {
         commands.put("LOGIN", new LoginCommand());
         commands.put("GET_CUSTOMER_INFO", new GetCustomerInfoCommand());
         commands.put("UPDATE_CUSTOMER_INFO", new UpdateCustomerInfoCommand());
-        commands.put("CREATE_SHIPMENT", new CreateShipmentCommand());
         commands.put("GET_CUSTOMER_ORDERS", new GetCustomerOrdersCommand());
-        commands.put("MAKE_PAYMENT", new MakePaymentCommand());
         commands.put("GET_PENDING_SHIPMENTS", new GetPendingShipmentsCommand());
         commands.put("ASSIGN_SHIPMENT", new AssignShipmentCommand());
         commands.put("GET_DRIVER_DELIVERIES", new GetDriverDeliveriesCommand());
         commands.put("UPDATE_DELIVERY_STATUS", new UpdateDeliveryStatusCommand());
         commands.put("GENERATE_DAILY_REPORT", new GenerateDailyReportCommand());
+        commands.put("TRACK_PACKAGE", new TrackPackageCommand());
+        commands.put("GET_CUSTOMER_INVOICES", new GetCustomerInvoicesCommand());
+        commands.put("MAKE_PAYMENT", new MakePaymentCommand());
+        commands.put("CREATE_SHIPMENT", new CreateShipmentCommand());
+        commands.put("MAKE_PAYMENT_AND_GET_RECEIPT", new MakePaymentAndGetReceiptCommand());
     }
     
     /**

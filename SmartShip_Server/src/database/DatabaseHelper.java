@@ -733,6 +733,46 @@ public class DatabaseHelper {
             return rows > 0;
         }
     }
+    
+    /**
+     * Get complete invoice and shipment details by invoice ID
+     * Used for building receipt information
+     */
+    public static Map<String, String> getInvoiceAndShipmentDetails(int invoiceId) {
+        String sql = "SELECT i.invoice_id, i.shipment_id, i.tracking_number, i.total, i.status AS invoice_status, " +
+                     "s.tracking_number AS ship_tracking, s.status AS ship_status, s.address, " +
+                     "u.username, u.email, u.address AS user_address, u.phone " +
+                     "FROM invoices i " +
+                     "JOIN shipments s ON i.shipment_id = s.shipment_id " +
+                     "JOIN users u ON s.user_id = u.user_id " +
+                     "WHERE i.invoice_id = ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, invoiceId);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                Map<String, String> details = new HashMap<>();
+                details.put("invoiceId", String.valueOf(rs.getInt("invoice_id")));
+                details.put("shipmentId", String.valueOf(rs.getInt("shipment_id")));
+                details.put("trackingNumber", rs.getString("ship_tracking"));
+                details.put("customerName", rs.getString("username"));
+                details.put("email", rs.getString("email"));
+                details.put("address", rs.getString("user_address"));
+                details.put("phone", rs.getString("phone"));
+                details.put("status", rs.getString("ship_status"));
+                details.put("total", String.format("%.2f", rs.getDouble("total")));
+                
+                return details;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching invoice and shipment details: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
 
 
     // --- End of class ---
