@@ -415,7 +415,7 @@ public class CustomerFrame extends JFrame {
         titleLabel.setForeground(new Color(52, 73, 94));
         panel.add(titleLabel, BorderLayout.NORTH);
         
-        String[] columns = {"Invoice #", "Tracking #", "Amount with Tax", "Status", "Date"};
+        String[] columns = {"Invoice #", "Invoice/shipment ID#", "Amount with Tax", "Status", "Date"};
         DefaultTableModel model = new DefaultTableModel(columns, 0);
         JTable invoicesTable = new JTable(model);
         invoicesTable.setRowHeight(30);
