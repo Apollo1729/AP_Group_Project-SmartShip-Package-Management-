@@ -605,6 +605,7 @@ public class DatabaseHelper {
      * GET DRIVER DELIVERIES
      */
     public static List<Map<String, String>> getDriverDeliveries(int userId) {
+
         String sql = "SELECT s.tracking_number, s.recipient_info, s.status, s.address " +
                     "FROM shipments s JOIN vehicles v ON s.vehicle_id = v.vehicle_id " +
                     "WHERE v.driver_id = ? AND s.status IN ('Assigned', 'In Transit')";
