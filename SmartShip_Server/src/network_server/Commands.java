@@ -120,18 +120,18 @@ public class Commands {
     }
     
     /**
-     * ASSIGN SHIPMENT Command - manager assigns a shipment to a delivery vehicle
-     * Reads: shipmentId, vehicleId
-     * Returns: confirmation that assignment was successful
-     */
-    public static class AssignShipmentCommand implements Command {
-        @Override
-        public Object execute(ObjectInputStream in) throws Exception {
-            int shipmentId = (int) in.readObject();
-            int vehicleId = (int) in.readObject();
-            return DatabaseHelper.assignShipmentToVehicle(shipmentId, vehicleId);
-        }
-    }
+    * ASSIGN SHIPMENT Command (Updated to return detailed result)
+    */
+	   public static class AssignShipmentCommand implements Command {
+	       @Override
+	       public Object execute(ObjectInputStream in) throws Exception {
+	           int shipmentId = (int) in.readObject();
+	           int vehicleId = (int) in.readObject();
+	           
+	           // Returns "SUCCESS" or "ERROR: detailed message"
+	           return DatabaseHelper.assignShipmentToVehicle(shipmentId, vehicleId);
+	       }
+	   }
     
     /**
      * GET DRIVER DELIVERIES Command - shows driver their assigned deliveries
@@ -286,5 +286,121 @@ public class Commands {
      }
  }
 
+		
+		/**
+		 * GET AVAILABLE VEHICLES Command
+		 * Returns vehicles with sufficient capacity in specified zone
+		 */
+		public static class GetAvailableVehiclesCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        int zone = (int) in.readObject();
+		        double requiredCapacity = (double) in.readObject();
+		        return DatabaseHelper.getAvailableVehicles(zone, requiredCapacity);
+		    }
+		}
+
+		/**
+		 * GET VEHICLE DETAILS Command
+		 */
+		public static class GetVehicleDetailsCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        int vehicleId = (int) in.readObject();
+		        return DatabaseHelper.getVehicleDetails(vehicleId);
+		    }
+		}
+		
+		/**
+		 * GET ALL VEHICLES Command
+		 * Returns complete list of all vehicles with driver and load information
+		 */
+		public static class GetAllVehiclesCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        return DatabaseHelper.getAllVehicles();
+		    }
+		}
+
+		/**
+		 * GET VEHICLE PACKAGES Command
+		 * Returns all shipments assigned to a specific vehicle
+		 */
+		public static class GetVehiclePackagesCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        int vehicleId = (int) in.readObject();
+		        return DatabaseHelper.getVehiclePackages(vehicleId);
+		    }
+		}
+		/**
+		 * GET SHIPMENT STATS BY DATE RANGE Command
+		 */
+		public static class GetShipmentStatsByDateRangeCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        java.sql.Date startDate = (java.sql.Date) in.readObject();
+		        java.sql.Date endDate = (java.sql.Date) in.readObject();
+		        return DatabaseHelper.getShipmentStatsByDateRange(startDate, endDate);
+		    }
+		}
+
+		/**
+		 * GET DAILY SHIPMENT COUNTS Command
+		 */
+		public static class GetDailyShipmentCountsCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        java.sql.Date startDate = (java.sql.Date) in.readObject();
+		        java.sql.Date endDate = (java.sql.Date) in.readObject();
+		        return DatabaseHelper.getDailyShipmentCounts(startDate, endDate);
+		    }
+		}
+
+		/**
+		 * GET DELIVERY PERFORMANCE STATS Command
+		 */
+		public static class GetDeliveryPerformanceStatsCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        java.sql.Date startDate = (java.sql.Date) in.readObject();
+		        java.sql.Date endDate = (java.sql.Date) in.readObject();
+		        return DatabaseHelper.getDeliveryPerformanceStats(startDate, endDate);
+		    }
+		}
+
+		/**
+		 * GET REVENUE STATS Command
+		 */
+		public static class GetRevenueStatsCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        java.sql.Date startDate = (java.sql.Date) in.readObject();
+		        java.sql.Date endDate = (java.sql.Date) in.readObject();
+		        return DatabaseHelper.getRevenueStats(startDate, endDate);
+		    }
+		}
+
+		/**
+		 * GET VEHICLE UTILIZATION STATS Command
+		 */
+		public static class GetVehicleUtilizationStatsCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        return DatabaseHelper.getVehicleUtilizationStats();
+		    }
+		}
+
+		/**
+		 * GET DRIVER PERFORMANCE STATS Command
+		 */
+		public static class GetDriverPerformanceStatsCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        java.sql.Date startDate = (java.sql.Date) in.readObject();
+		        java.sql.Date endDate = (java.sql.Date) in.readObject();
+		        return DatabaseHelper.getDriverPerformanceStats(startDate, endDate);
+		    }
+		}
     
 }

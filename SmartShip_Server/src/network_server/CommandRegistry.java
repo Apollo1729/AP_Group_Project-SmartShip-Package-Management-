@@ -31,6 +31,17 @@ public class CommandRegistry {
         commands.put("MAKE_PAYMENT", new MakePaymentCommand());
         commands.put("CREATE_SHIPMENT", new CreateShipmentCommand());
         commands.put("MAKE_PAYMENT_AND_GET_RECEIPT", new MakePaymentAndGetReceiptCommand());
+        commands.put("GET_AVAILABLE_VEHICLES", new GetAvailableVehiclesCommand());
+        commands.put("GET_VEHICLE_DETAILS", new GetVehicleDetailsCommand());
+        commands.put("GET_ALL_VEHICLES", new GetAllVehiclesCommand());
+        commands.put("GET_VEHICLE_PACKAGES", new GetVehiclePackagesCommand());
+        commands.put("GET_SHIPMENT_STATS_BY_DATE_RANGE", new GetShipmentStatsByDateRangeCommand());
+        commands.put("GET_DAILY_SHIPMENT_COUNTS", new GetDailyShipmentCountsCommand());
+        commands.put("GET_DELIVERY_PERFORMANCE_STATS", new GetDeliveryPerformanceStatsCommand());
+        commands.put("GET_REVENUE_STATS", new GetRevenueStatsCommand());
+        commands.put("GET_VEHICLE_UTILIZATION_STATS", new GetVehicleUtilizationStatsCommand());
+        commands.put("GET_DRIVER_PERFORMANCE_STATS", new GetDriverPerformanceStatsCommand());
+
     }
     
     /**

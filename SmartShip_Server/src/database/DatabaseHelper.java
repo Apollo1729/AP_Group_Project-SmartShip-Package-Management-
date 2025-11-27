@@ -451,24 +451,155 @@ public class DatabaseHelper {
     }
 
     /**
-     * ASSIGN SHIPMENT TO VEHICLE (simple)
-     * Note: For a strict many-to-many relationship and vehicle capacity checks, a proper assignment table and checks should be implemented.
-     */
-    public static boolean assignShipmentToVehicle(int shipmentId, int vehicleId) {
-        String sql = "UPDATE shipments SET vehicle_id = ?, status = 'Assigned' WHERE shipment_id = ?";
+    * ASSIGN SHIPMENT TO VEHICLE (Enhanced with zone validation and capacity status update)
+    * - Validates zone matching between shipment and vehicle
+    * - Checks available capacity
+    * - Updates vehicle load
+    * - Automatically sets vehicle status to "In Use" when capacity is full or near full
+    */
+   public static String assignShipmentToVehicle(int shipmentId, int vehicleId) {
+       String getShipmentSql = "SELECT weight, zone, tracking_number FROM shipments WHERE shipment_id = ?";
+       String checkVehicleSql = "SELECT capacity, COALESCE(current_weight, 0) as current_weight, " +
+                                "zone, status, " +
+                                "COALESCE(vehicle_number, CONCAT('VEH-', vehicle_id)) as vehicle_number " +
+                                "FROM vehicles WHERE vehicle_id = ?";
+       String updateShipmentSql = "UPDATE shipments SET vehicle_id = ?, status = 'Assigned' WHERE shipment_id = ?";
+       String updateVehicleSql = "UPDATE vehicles SET " +
+                                "current_weight = current_weight + ?, " +
+                                "current_item_count = current_item_count + 1, " +
+                                "status = ? " +
+                                "WHERE vehicle_id = ?";
 
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+       try (Connection conn = getConnection()) {
+           conn.setAutoCommit(false);
+           
+           // 1. Get shipment details
+           double shipmentWeight = 0;
+           int shipmentZone = 0;
+           String trackingNumber = "";
+           
+           try (PreparedStatement stmt = conn.prepareStatement(getShipmentSql)) {
+               stmt.setInt(1, shipmentId);
+               ResultSet rs = stmt.executeQuery();
+               if (rs.next()) {
+                   shipmentWeight = rs.getDouble("weight");
+                   shipmentZone = rs.getInt("zone");
+                   trackingNumber = rs.getString("tracking_number");
+               } else {
+                   conn.rollback();
+                   System.err.println("ERROR: Shipment not found: " + shipmentId);
+                   return "ERROR: Shipment not found";
+               }
+           }
+           
+           // 2. Check vehicle capacity and zone
+           double capacity = 0;
+           double currentWeight = 0;
+           int vehicleZone = 0;
+           String vehicleStatus = "";
+           String vehicleNumber = "";
+           
+           try (PreparedStatement stmt = conn.prepareStatement(checkVehicleSql)) {
+               stmt.setInt(1, vehicleId);
+               ResultSet rs = stmt.executeQuery();
+               if (rs.next()) {
+                   capacity = rs.getDouble("capacity");
+                   currentWeight = rs.getDouble("current_weight");
+                   vehicleZone = rs.getInt("zone");
+                   vehicleStatus = rs.getString("status");
+                   vehicleNumber = rs.getString("vehicle_number");
+               } else {
+                   conn.rollback();
+                   System.err.println("ERROR: Vehicle not found: " + vehicleId);
+                   return "ERROR: Vehicle not found";
+               }
+           }
+           
+           // 3. VALIDATE ZONE MATCH
+           if (shipmentZone != vehicleZone) {
+               conn.rollback();
+               String errorMsg = String.format(
+                   "ERROR: Zone mismatch - Shipment is in Zone %d but vehicle %s operates in Zone %d",
+                   shipmentZone, vehicleNumber, vehicleZone
+               );
+               System.err.println(errorMsg);
+               return errorMsg;
+           }
+           
+           // 4. VALIDATE CAPACITY
+           double availableCapacity = capacity - currentWeight;
+           if (availableCapacity < shipmentWeight) {
+               conn.rollback();
+               String errorMsg = String.format(
+                   "ERROR: Insufficient capacity - Vehicle %s has %.2f kg available but shipment requires %.2f kg",
+                   vehicleNumber, availableCapacity, shipmentWeight
+               );
+               System.err.println(errorMsg);
+               return errorMsg;
+           }
+           
+           // 5. CHECK IF VEHICLE IS AVAILABLE
+           if (!"Available".equals(vehicleStatus) && !"In Use".equals(vehicleStatus)) {
+               conn.rollback();
+               String errorMsg = String.format(
+                   "ERROR: Vehicle %s is not available for assignment (Status: %s)",
+                   vehicleNumber, vehicleStatus
+               );
+               System.err.println(errorMsg);
+               return errorMsg;
+           }
+           
+           // 6. Calculate new weight and determine new status
+           double newWeight = currentWeight + shipmentWeight;
+           double utilizationPercent = (newWeight / capacity) * 100;
+           
+           // Determine new vehicle status based on capacity
+           String newStatus;
+           if (utilizationPercent >= 95) {
+               newStatus = "Full"; // 95% or more = Full
+           } else if (utilizationPercent >= 1) {
+               newStatus = "In Use"; // Any load = In Use
+           } else {
+               newStatus = "Available"; // Empty = Available
+           }
+           
+           // 7. Update shipment
+           try (PreparedStatement stmt = conn.prepareStatement(updateShipmentSql)) {
+               stmt.setInt(1, vehicleId);
+               stmt.setInt(2, shipmentId);
+               int updated = stmt.executeUpdate();
+               if (updated == 0) {
+                   conn.rollback();
+                   return "ERROR: Failed to update shipment";
+               }
+           }
+           
+           // 8. Update vehicle load and status
+           try (PreparedStatement stmt = conn.prepareStatement(updateVehicleSql)) {
+               stmt.setDouble(1, shipmentWeight);
+               stmt.setString(2, newStatus);
+               stmt.setInt(3, vehicleId);
+               stmt.executeUpdate();
+           }
+           
+           conn.commit();
+           
+           System.out.println(String.format(
+               "SUCCESS: Assigned shipment %s (%.2f kg) to vehicle %s. " +
+               "New load: %.2f/%.2f kg (%.1f%%). Status: %s",
+               trackingNumber, shipmentWeight, vehicleNumber,
+               newWeight, capacity, utilizationPercent, newStatus
+           ));
+           
+           return "SUCCESS";
+           
+       } catch (SQLException e) {
+           System.err.println("Database error during assignment: " + e.getMessage());
+           e.printStackTrace();
+           return "ERROR: Database error - " + e.getMessage();
+       }
+   }
 
-            stmt.setInt(1, vehicleId);
-            stmt.setInt(2, shipmentId);
-
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
 
     /**
      * GET DRIVER DELIVERIES
@@ -772,6 +903,712 @@ public class DatabaseHelper {
             e.printStackTrace();
         }
         return null;
+    }
+		/**
+		 * GET AVAILABLE VEHICLES (Updated to exclude Full vehicles and enforce zone matching)
+		 */
+		public static List<Map<String, String>> getAvailableVehicles(int zone, double requiredCapacity) {
+		    String sql = "SELECT v.vehicle_id, " +
+		                "COALESCE(v.vehicle_number, CONCAT('VEH-', v.vehicle_id)) as vehicle_number, " +
+		                "v.vehicle_type as type, " +
+		                "v.capacity, " +
+		                "COALESCE(v.current_weight, 0) as current_load, " +
+		                "(v.capacity - COALESCE(v.current_weight, 0)) as available_capacity, " +
+		                "COALESCE(v.zone, 1) as zone, " +
+		                "v.status, " +
+		                "COALESCE(u.username, 'Unassigned') as driver_name " +
+		                "FROM vehicles v " +
+		                "LEFT JOIN drivers d ON v.driver_id = d.user_id " +
+		                "LEFT JOIN users u ON d.user_id = u.user_id " +
+		                "WHERE v.zone = ? " +  // MUST match zone exactly
+		                "AND v.status IN ('Available', 'In Use') " +  // Exclude 'Full' vehicles
+		                "AND (v.capacity - COALESCE(v.current_weight, 0)) >= ? " +
+		                "ORDER BY available_capacity DESC";
+		    
+		    List<Map<String, String>> vehicles = new ArrayList<>();
+		    
+		    try (Connection conn = getConnection();
+		         PreparedStatement stmt = conn.prepareStatement(sql)) {
+		        
+		        stmt.setInt(1, zone);
+		        stmt.setDouble(2, requiredCapacity);
+		        ResultSet rs = stmt.executeQuery();
+		        
+		        while (rs.next()) {
+		            Map<String, String> vehicle = new HashMap<>();
+		            vehicle.put("vehicleId", String.valueOf(rs.getInt("vehicle_id")));
+		            vehicle.put("vehicleNumber", rs.getString("vehicle_number"));
+		            vehicle.put("type", rs.getString("type"));
+		            vehicle.put("capacity", String.format("%.2f", rs.getDouble("capacity")));
+		            vehicle.put("currentLoad", String.format("%.2f", rs.getDouble("current_load")));
+		            vehicle.put("availableCapacity", String.format("%.2f", rs.getDouble("available_capacity")));
+		            vehicle.put("zone", String.valueOf(rs.getInt("zone")));
+		            vehicle.put("status", rs.getString("status"));
+		            vehicle.put("driverName", rs.getString("driver_name"));
+		            vehicles.add(vehicle);
+		        }
+		    } catch (SQLException e) {
+		        e.printStackTrace();
+		    }
+		    
+		    return vehicles;
+		}
+
+    /**
+     * GET VEHICLE DETAILS
+     */
+    public static Map<String, String> getVehicleDetails(int vehicleId) {
+        String sql = "SELECT v.vehicle_id, " +
+                    "COALESCE(v.vehicle_number, CONCAT('VEH-', v.vehicle_id)) as vehicle_number, " +
+                    "v.vehicle_type, v.license_plate, v.capacity, " +
+                    "COALESCE(v.current_weight, 0) as current_weight, " +
+                    "v.current_item_count, v.status, " +
+                    "COALESCE(v.zone, 1) as zone, " +
+                    "u.username as driver_name, u.phone as driver_phone, " +
+                    "d.license_number, d.rating " +
+                    "FROM vehicles v " +
+                    "LEFT JOIN drivers d ON v.driver_id = d.user_id " +
+                    "LEFT JOIN users u ON d.user_id = u.user_id " +
+                    "WHERE v.vehicle_id = ?";
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, vehicleId);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                Map<String, String> vehicle = new HashMap<>();
+                vehicle.put("vehicleId", String.valueOf(rs.getInt("vehicle_id")));
+                vehicle.put("vehicleNumber", rs.getString("vehicle_number"));
+                vehicle.put("vehicleType", rs.getString("vehicle_type"));
+                vehicle.put("licensePlate", rs.getString("license_plate"));
+                vehicle.put("capacity", String.format("%.2f", rs.getDouble("capacity")));
+                vehicle.put("currentWeight", String.format("%.2f", rs.getDouble("current_weight")));
+                vehicle.put("itemCount", String.valueOf(rs.getInt("current_item_count")));
+                vehicle.put("status", rs.getString("status"));
+                vehicle.put("zone", String.valueOf(rs.getInt("zone")));
+                vehicle.put("driverName", rs.getString("driver_name") != null ? 
+                           rs.getString("driver_name") : "Unassigned");
+                vehicle.put("driverPhone", rs.getString("driver_phone") != null ? 
+                           rs.getString("driver_phone") : "N/A");
+                vehicle.put("driverLicense", rs.getString("license_number") != null ? 
+                           rs.getString("license_number") : "N/A");
+                vehicle.put("driverRating", rs.getDouble("rating") > 0 ? 
+                           String.format("%.2f", rs.getDouble("rating")) : "N/A");
+                return vehicle;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
+ // Add these methods to DatabaseHelper.java
+
+    /**
+     * GET ALL VEHICLES
+     * Returns complete list of all vehicles with driver information and current load
+     */
+    public static List<Map<String, String>> getAllVehicles() {
+        String sql = "SELECT " +
+                    "v.vehicle_id, " +
+                    "COALESCE(v.vehicle_number, CONCAT('VEH-', v.vehicle_id)) as vehicle_number, " +
+                    "v.vehicle_type as type, " +
+                    "v.license_plate, " +
+                    "v.capacity, " +
+                    "COALESCE(v.current_weight, 0) as current_load, " +
+                    "COALESCE(v.current_item_count, 0) as item_count, " +
+                    "COALESCE(v.zone, 1) as zone, " +
+                    "v.status, " +
+                    "COALESCE(u.username, 'Unassigned') as driver_name, " +
+                    "u.phone as driver_phone " +
+                    "FROM vehicles v " +
+                    "LEFT JOIN drivers d ON v.driver_id = d.user_id " +
+                    "LEFT JOIN users u ON d.user_id = u.user_id " +
+                    "ORDER BY v.vehicle_id";
+        
+        List<Map<String, String>> vehicles = new ArrayList<>();
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                Map<String, String> vehicle = new HashMap<>();
+                vehicle.put("vehicleId", String.valueOf(rs.getInt("vehicle_id")));
+                vehicle.put("vehicleNumber", rs.getString("vehicle_number"));
+                vehicle.put("type", rs.getString("type"));
+                vehicle.put("licensePlate", rs.getString("license_plate"));
+                vehicle.put("capacity", String.format("%.2f", rs.getDouble("capacity")));
+                vehicle.put("currentLoad", String.format("%.2f", rs.getDouble("current_load")));
+                vehicle.put("itemCount", String.valueOf(rs.getInt("item_count")));
+                vehicle.put("zone", String.valueOf(rs.getInt("zone")));
+                vehicle.put("status", rs.getString("status"));
+                vehicle.put("driverName", rs.getString("driver_name"));
+                vehicle.put("driverPhone", rs.getString("driver_phone") != null ? 
+                           rs.getString("driver_phone") : "N/A");
+                vehicles.add(vehicle);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error getting all vehicles: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return vehicles;
+    }
+
+    /**
+     * GET VEHICLE PACKAGES
+     * Returns all shipments currently assigned to a specific vehicle
+     */
+    public static List<Map<String, String>> getVehiclePackages(int vehicleId) {
+        String sql = "SELECT " +
+                    "s.shipment_id, " +
+                    "s.tracking_number, " +
+                    "s.recipient_info, " +
+                    "s.address, " +
+                    "s.weight, " +
+                    "s.package_type, " +
+                    "s.zone, " +
+                    "s.status, " +
+                    "s.cost, " +
+                    "s.payment_status, " +
+                    "s.created_at, " +
+                    "u.username as customer_name, " +
+                    "u.phone as customer_phone " +
+                    "FROM shipments s " +
+                    "JOIN users u ON s.user_id = u.user_id " +
+                    "WHERE s.vehicle_id = ? " +
+                    "AND s.status IN ('Assigned', 'In Transit', 'Out for Delivery') " +
+                    "ORDER BY s.created_at DESC";
+        
+        List<Map<String, String>> packages = new ArrayList<>();
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, vehicleId);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, String> pkg = new HashMap<>();
+                pkg.put("shipmentId", String.valueOf(rs.getInt("shipment_id")));
+                pkg.put("trackingNumber", rs.getString("tracking_number"));
+                pkg.put("recipientInfo", rs.getString("recipient_info"));
+                pkg.put("address", rs.getString("address") != null ? 
+                       rs.getString("address") : "N/A");
+                pkg.put("weight", String.format("%.2f", rs.getDouble("weight")));
+                pkg.put("packageType", rs.getString("package_type"));
+                pkg.put("zone", String.valueOf(rs.getInt("zone")));
+                pkg.put("status", rs.getString("status"));
+                pkg.put("cost", String.format("%.2f", rs.getDouble("cost")));
+                pkg.put("paymentStatus", rs.getString("payment_status"));
+                pkg.put("customerName", rs.getString("customer_name"));
+                pkg.put("customerPhone", rs.getString("customer_phone"));
+                
+                Timestamp timestamp = rs.getTimestamp("created_at");
+                if (timestamp != null) {
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+                    pkg.put("createdAt", sdf.format(new java.util.Date(timestamp.getTime())));
+                }
+                
+                packages.add(pkg);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error getting vehicle packages: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return packages;
+    }
+
+    /**
+     * GET VEHICLE STATISTICS
+     * Returns summary statistics for a vehicle (useful for dashboard)
+     */
+    public static Map<String, String> getVehicleStatistics(int vehicleId) {
+        String sql = "SELECT " +
+                    "COUNT(s.shipment_id) as total_shipments, " +
+                    "SUM(s.weight) as total_weight, " +
+                    "SUM(s.cost) as total_revenue, " +
+                    "COUNT(CASE WHEN s.status = 'Delivered' THEN 1 END) as delivered_count, " +
+                    "COUNT(CASE WHEN s.status = 'In Transit' THEN 1 END) as in_transit_count " +
+                    "FROM shipments s " +
+                    "WHERE s.vehicle_id = ?";
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, vehicleId);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                Map<String, String> stats = new HashMap<>();
+                stats.put("totalShipments", String.valueOf(rs.getInt("total_shipments")));
+                stats.put("totalWeight", String.format("%.2f", rs.getDouble("total_weight")));
+                stats.put("totalRevenue", String.format("%.2f", rs.getDouble("total_revenue")));
+                stats.put("deliveredCount", String.valueOf(rs.getInt("delivered_count")));
+                stats.put("inTransitCount", String.valueOf(rs.getInt("in_transit_count")));
+                return stats;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error getting vehicle statistics: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return null;
+    }/**
+     * UNASSIGN SHIPMENT FROM VEHICLE
+     * Removes shipment from vehicle and updates vehicle capacity/status
+     * 
+     */
+    public static boolean unassignShipmentFromVehicle(int shipmentId) {
+        String getShipmentSql = "SELECT weight, vehicle_id FROM shipments WHERE shipment_id = ?";
+        String updateShipmentSql = "UPDATE shipments SET vehicle_id = NULL, status = 'Pending' WHERE shipment_id = ?";
+        String getVehicleSql = "SELECT capacity, current_weight FROM vehicles WHERE vehicle_id = ?";
+        String updateVehicleSql = "UPDATE vehicles SET " +
+                                 "current_weight = current_weight - ?, " +
+                                 "current_item_count = current_item_count - 1, " +
+                                 "status = ? " +
+                                 "WHERE vehicle_id = ?";
+        
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            
+            // Get shipment info
+            double weight = 0;
+            Integer vehicleId = null;
+            
+            try (PreparedStatement stmt = conn.prepareStatement(getShipmentSql)) {
+                stmt.setInt(1, shipmentId);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    weight = rs.getDouble("weight");
+                    vehicleId = rs.getInt("vehicle_id");
+                    if (rs.wasNull()) {
+                        vehicleId = null;
+                    }
+                }
+            }
+            
+            if (vehicleId == null) {
+                conn.rollback();
+                System.err.println("Shipment not assigned to any vehicle");
+                return false;
+            }
+            
+            // Update shipment
+            try (PreparedStatement stmt = conn.prepareStatement(updateShipmentSql)) {
+                stmt.setInt(1, shipmentId);
+                stmt.executeUpdate();
+            }
+            
+            // Get current vehicle state
+            double capacity = 0;
+            double currentWeight = 0;
+            
+            try (PreparedStatement stmt = conn.prepareStatement(getVehicleSql)) {
+                stmt.setInt(1, vehicleId);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    capacity = rs.getDouble("capacity");
+                    currentWeight = rs.getDouble("current_weight");
+                }
+            }
+            
+            // Calculate new status
+            double newWeight = currentWeight - weight;
+            double utilizationPercent = (newWeight / capacity) * 100;
+            
+            String newStatus;
+            if (utilizationPercent >= 95) {
+                newStatus = "Full";
+            } else if (utilizationPercent >= 1) {
+                newStatus = "In Use";
+            } else {
+                newStatus = "Available";
+            }
+            
+            // Update vehicle
+            try (PreparedStatement stmt = conn.prepareStatement(updateVehicleSql)) {
+                stmt.setDouble(1, weight);
+                stmt.setString(2, newStatus);
+                stmt.setInt(3, vehicleId);
+                stmt.executeUpdate();
+            }
+            
+            conn.commit();
+            System.out.println("Unassigned shipment " + shipmentId + " from vehicle " + vehicleId);
+            return true;
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * GET SHIPMENT STATISTICS BY DATE RANGE
+     * Returns shipment counts and totals for a given date range
+     */
+    public static Map<String, Object> getShipmentStatsByDateRange(java.sql.Date startDate, java.sql.Date endDate) {
+        String sql = "SELECT " +
+                    "COUNT(*) as total_shipments, " +
+                    "SUM(weight) as total_weight, " +
+                    "SUM(cost) as total_revenue, " +
+                    "AVG(weight) as avg_weight, " +
+                    "COUNT(CASE WHEN status = 'Delivered' THEN 1 END) as delivered_count, " +
+                    "COUNT(CASE WHEN status = 'In Transit' THEN 1 END) as in_transit_count, " +
+                    "COUNT(CASE WHEN status = 'Pending' THEN 1 END) as pending_count, " +
+                    "COUNT(CASE WHEN status = 'Assigned' THEN 1 END) as assigned_count, " +
+                    "COUNT(CASE WHEN package_type = 'Express' THEN 1 END) as express_count, " +
+                    "COUNT(CASE WHEN package_type = 'Standard' THEN 1 END) as standard_count, " +
+                    "COUNT(CASE WHEN package_type = 'Fragile' THEN 1 END) as fragile_count " +
+                    "FROM shipments " +
+                    "WHERE DATE(created_at) BETWEEN ? AND ?";
+        
+        Map<String, Object> stats = new HashMap<>();
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setDate(1, startDate);
+            stmt.setDate(2, endDate);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                stats.put("totalShipments", rs.getInt("total_shipments"));
+                stats.put("totalWeight", rs.getDouble("total_weight"));
+                stats.put("totalRevenue", rs.getDouble("total_revenue"));
+                stats.put("avgWeight", rs.getDouble("avg_weight"));
+                stats.put("deliveredCount", rs.getInt("delivered_count"));
+                stats.put("inTransitCount", rs.getInt("in_transit_count"));
+                stats.put("pendingCount", rs.getInt("pending_count"));
+                stats.put("assignedCount", rs.getInt("assigned_count"));
+                stats.put("expressCount", rs.getInt("express_count"));
+                stats.put("standardCount", rs.getInt("standard_count"));
+                stats.put("fragileCount", rs.getInt("fragile_count"));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error getting shipment stats: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return stats;
+    }
+
+    /**
+     * GET DAILY SHIPMENT COUNTS
+     * Returns shipment counts for each day in the date range
+     */
+    public static List<Map<String, Object>> getDailyShipmentCounts(java.sql.Date startDate, java.sql.Date endDate) {
+        String sql = "SELECT " +
+                    "DATE(created_at) as ship_date, " +
+                    "COUNT(*) as count, " +
+                    "SUM(cost) as revenue " +
+                    "FROM shipments " +
+                    "WHERE DATE(created_at) BETWEEN ? AND ? " +
+                    "GROUP BY DATE(created_at) " +
+                    "ORDER BY ship_date";
+        
+        List<Map<String, Object>> dailyCounts = new ArrayList<>();
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setDate(1, startDate);
+            stmt.setDate(2, endDate);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, Object> day = new HashMap<>();
+                day.put("date", rs.getDate("ship_date"));
+                day.put("count", rs.getInt("count"));
+                day.put("revenue", rs.getDouble("revenue"));
+                dailyCounts.add(day);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error getting daily counts: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return dailyCounts;
+    }
+
+    /**
+     * GET DELIVERY PERFORMANCE STATISTICS
+     * Analyzes on-time vs delayed deliveries
+     */
+    public static Map<String, Object> getDeliveryPerformanceStats(java.sql.Date startDate, java.sql.Date endDate) {
+        String sql = "SELECT " +
+                    "COUNT(CASE WHEN status = 'Delivered' THEN 1 END) as delivered, " +
+                    "COUNT(CASE WHEN status = 'Delivered' AND actual_delivery_date <= expected_delivery_date THEN 1 END) as on_time, " +
+                    "COUNT(CASE WHEN status = 'Delivered' AND actual_delivery_date > expected_delivery_date THEN 1 END) as delayed, " +
+                    "COUNT(CASE WHEN status IN ('In Transit', 'Assigned', 'Out for Delivery') THEN 1 END) as in_progress, " +
+                    "COUNT(CASE WHEN status = 'Pending' THEN 1 END) as pending, " +
+                    "AVG(DATEDIFF(actual_delivery_date, created_at)) as avg_delivery_days " +
+                    "FROM shipments " +
+                    "WHERE DATE(created_at) BETWEEN ? AND ?";
+        
+        Map<String, Object> stats = new HashMap<>();
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setDate(1, startDate);
+            stmt.setDate(2, endDate);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                int delivered = rs.getInt("delivered");
+                int onTime = rs.getInt("on_time");
+                int delayed = rs.getInt("delayed");
+                
+                stats.put("delivered", delivered);
+                stats.put("onTime", onTime);
+                stats.put("delayed", delayed);
+                stats.put("inProgress", rs.getInt("in_progress"));
+                stats.put("pending", rs.getInt("pending"));
+                stats.put("avgDeliveryDays", rs.getDouble("avg_delivery_days"));
+                
+                // Calculate percentage
+                if (delivered > 0) {
+                    stats.put("onTimePercent", (onTime * 100.0) / delivered);
+                    stats.put("delayedPercent", (delayed * 100.0) / delivered);
+                } else {
+                    stats.put("onTimePercent", 0.0);
+                    stats.put("delayedPercent", 0.0);
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error getting delivery performance: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return stats;
+    }
+
+    /**
+     * GET REVENUE STATISTICS
+     * Returns revenue breakdown by various categories
+     */
+    public static Map<String, Object> getRevenueStats(java.sql.Date startDate, java.sql.Date endDate) {
+        String sql = "SELECT " +
+                    "SUM(cost) as total_revenue, " +
+                    "SUM(CASE WHEN payment_status = 'Paid' THEN cost ELSE 0 END) as paid_revenue, " +
+                    "SUM(CASE WHEN payment_status = 'Unpaid' THEN cost ELSE 0 END) as unpaid_revenue, " +
+                    "SUM(CASE WHEN package_type = 'Express' THEN cost ELSE 0 END) as express_revenue, " +
+                    "SUM(CASE WHEN package_type = 'Standard' THEN cost ELSE 0 END) as standard_revenue, " +
+                    "SUM(CASE WHEN package_type = 'Fragile' THEN cost ELSE 0 END) as fragile_revenue, " +
+                    "SUM(CASE WHEN zone = 1 THEN cost ELSE 0 END) as zone1_revenue, " +
+                    "SUM(CASE WHEN zone = 2 THEN cost ELSE 0 END) as zone2_revenue, " +
+                    "AVG(cost) as avg_shipment_cost, " +
+                    "COUNT(*) as total_shipments " +
+                    "FROM shipments " +
+                    "WHERE DATE(created_at) BETWEEN ? AND ?";
+        
+        Map<String, Object> stats = new HashMap<>();
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setDate(1, startDate);
+            stmt.setDate(2, endDate);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                stats.put("totalRevenue", rs.getDouble("total_revenue"));
+                stats.put("paidRevenue", rs.getDouble("paid_revenue"));
+                stats.put("unpaidRevenue", rs.getDouble("unpaid_revenue"));
+                stats.put("expressRevenue", rs.getDouble("express_revenue"));
+                stats.put("standardRevenue", rs.getDouble("standard_revenue"));
+                stats.put("fragileRevenue", rs.getDouble("fragile_revenue"));
+                stats.put("zone1Revenue", rs.getDouble("zone1_revenue"));
+                stats.put("zone2Revenue", rs.getDouble("zone2_revenue"));
+                stats.put("avgShipmentCost", rs.getDouble("avg_shipment_cost"));
+                stats.put("totalShipments", rs.getInt("total_shipments"));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error getting revenue stats: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return stats;
+    }
+
+    /**
+     * GET VEHICLE UTILIZATION STATISTICS
+     * Returns capacity utilization for all vehicles
+     */
+    public static List<Map<String, Object>> getVehicleUtilizationStats() {
+        String sql = "SELECT " +
+                    "v.vehicle_id, " +
+                    "COALESCE(v.vehicle_number, CONCAT('VEH-', v.vehicle_id)) as vehicle_number, " +
+                    "v.vehicle_type, " +
+                    "v.capacity, " +
+                    "COALESCE(v.current_weight, 0) as current_weight, " +
+                    "COALESCE(v.current_item_count, 0) as item_count, " +
+                    "v.status, " +
+                    "v.zone, " +
+                    "COALESCE(u.username, 'Unassigned') as driver_name, " +
+                    "ROUND((COALESCE(v.current_weight, 0) / v.capacity) * 100, 2) as utilization_percent, " +
+                    "COUNT(s.shipment_id) as total_shipments_ever, " +
+                    "SUM(CASE WHEN s.status = 'Delivered' THEN 1 ELSE 0 END) as delivered_shipments " +
+                    "FROM vehicles v " +
+                    "LEFT JOIN drivers d ON v.driver_id = d.user_id " +
+                    "LEFT JOIN users u ON d.user_id = u.user_id " +
+                    "LEFT JOIN shipments s ON v.vehicle_id = s.vehicle_id " +
+                    "GROUP BY v.vehicle_id " +
+                    "ORDER BY utilization_percent DESC";
+        
+        List<Map<String, Object>> vehicleStats = new ArrayList<>();
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                Map<String, Object> vehicle = new HashMap<>();
+                vehicle.put("vehicleId", rs.getInt("vehicle_id"));
+                vehicle.put("vehicleNumber", rs.getString("vehicle_number"));
+                vehicle.put("vehicleType", rs.getString("vehicle_type"));
+                vehicle.put("capacity", rs.getDouble("capacity"));
+                vehicle.put("currentWeight", rs.getDouble("current_weight"));
+                vehicle.put("itemCount", rs.getInt("item_count"));
+                vehicle.put("status", rs.getString("status"));
+                vehicle.put("zone", rs.getInt("zone"));
+                vehicle.put("driverName", rs.getString("driver_name"));
+                vehicle.put("utilizationPercent", rs.getDouble("utilization_percent"));
+                vehicle.put("totalShipmentsEver", rs.getInt("total_shipments_ever"));
+                vehicle.put("deliveredShipments", rs.getInt("delivered_shipments"));
+                vehicleStats.add(vehicle);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error getting vehicle utilization: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return vehicleStats;
+    }
+
+    /**
+     * GET DRIVER PERFORMANCE STATISTICS
+     * Returns delivery performance by driver
+     */
+    public static List<Map<String, Object>> getDriverPerformanceStats(java.sql.Date startDate, java.sql.Date endDate) {
+        String sql = "SELECT " +
+                    "u.user_id, " +
+                    "u.username as driver_name, " +
+                    "COUNT(s.shipment_id) as total_deliveries, " +
+                    "COUNT(CASE WHEN s.status = 'Delivered' THEN 1 END) as completed_deliveries, " +
+                    "COUNT(CASE WHEN s.status = 'Delivered' AND s.actual_delivery_date <= s.expected_delivery_date THEN 1 END) as on_time_deliveries, " +
+                    "AVG(CASE WHEN s.status = 'Delivered' THEN DATEDIFF(s.actual_delivery_date, s.created_at) END) as avg_delivery_days, " +
+                    "d.rating, " +
+                    "d.total_deliveries as career_total " +
+                    "FROM drivers d " +
+                    "JOIN users u ON d.user_id = u.user_id " +
+                    "LEFT JOIN vehicles v ON d.user_id = v.driver_id " +
+                    "LEFT JOIN shipments s ON v.vehicle_id = s.vehicle_id " +
+                    "    AND DATE(s.created_at) BETWEEN ? AND ? " +
+                    "WHERE d.status = 'Active' " +
+                    "GROUP BY u.user_id " +
+                    "ORDER BY completed_deliveries DESC";
+        
+        List<Map<String, Object>> driverStats = new ArrayList<>();
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setDate(1, startDate);
+            stmt.setDate(2, endDate);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, Object> driver = new HashMap<>();
+                driver.put("userId", rs.getInt("user_id"));
+                driver.put("driverName", rs.getString("driver_name"));
+                driver.put("totalDeliveries", rs.getInt("total_deliveries"));
+                driver.put("completedDeliveries", rs.getInt("completed_deliveries"));
+                driver.put("onTimeDeliveries", rs.getInt("on_time_deliveries"));
+                driver.put("avgDeliveryDays", rs.getDouble("avg_delivery_days"));
+                driver.put("rating", rs.getDouble("rating"));
+                driver.put("careerTotal", rs.getInt("career_total"));
+                
+                int completed = rs.getInt("completed_deliveries");
+                int onTime = rs.getInt("on_time_deliveries");
+                if (completed > 0) {
+                    driver.put("onTimePercent", (onTime * 100.0) / completed);
+                } else {
+                    driver.put("onTimePercent", 0.0);
+                }
+                
+                driverStats.add(driver);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error getting driver performance: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return driverStats;
+    }
+
+    /**
+     * GET TOP CUSTOMERS BY REVENUE
+     * Returns customers with highest revenue in date range
+     */
+    public static List<Map<String, Object>> getTopCustomersByRevenue(java.sql.Date startDate, java.sql.Date endDate, int limit) {
+        String sql = "SELECT " +
+                    "u.user_id, " +
+                    "u.username, " +
+                    "c.company_name, " +
+                    "COUNT(s.shipment_id) as shipment_count, " +
+                    "SUM(s.cost) as total_revenue, " +
+                    "AVG(s.cost) as avg_shipment_cost " +
+                    "FROM users u " +
+                    "JOIN customers c ON u.user_id = c.user_id " +
+                    "JOIN shipments s ON u.user_id = s.user_id " +
+                    "WHERE DATE(s.created_at) BETWEEN ? AND ? " +
+                    "GROUP BY u.user_id " +
+                    "ORDER BY total_revenue DESC " +
+                    "LIMIT ?";
+        
+        List<Map<String, Object>> customers = new ArrayList<>();
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setDate(1, startDate);
+            stmt.setDate(2, endDate);
+            stmt.setInt(3, limit);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, Object> customer = new HashMap<>();
+                customer.put("userId", rs.getInt("user_id"));
+                customer.put("username", rs.getString("username"));
+                customer.put("companyName", rs.getString("company_name"));
+                customer.put("shipmentCount", rs.getInt("shipment_count"));
+                customer.put("totalRevenue", rs.getDouble("total_revenue"));
+                customer.put("avgShipmentCost", rs.getDouble("avg_shipment_cost"));
+                customers.add(customer);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error getting top customers: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return customers;
     }
 
 
