@@ -89,6 +89,40 @@ public class LoginController {
                 user.setAddress(userInfo.get("address"));
                 user.setRole(role);
                 
+                // Set department - get it from additional employee info
+                try {
+                    // Request employee-specific info from server
+                    Socket empSocket = new Socket(SERVER_HOST, SERVER_PORT);
+                    ObjectOutputStream empOut = new ObjectOutputStream(empSocket.getOutputStream());
+                    ObjectInputStream empIn = new ObjectInputStream(empSocket.getInputStream());
+                    
+                    empOut.writeObject("GET_EMPLOYEE_INFO");
+                    empOut.flush();
+                    empOut.writeObject(user.getUserId());
+                    empOut.flush();
+                    empOut.writeObject(role);
+                    empOut.flush();
+                    
+                    Object empResponse = empIn.readObject();
+                    if (empResponse instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, String> empInfo = (Map<String, String>) empResponse;
+                        
+                        // Set department if available
+                        if (empInfo.containsKey("department")) {
+                            user.setDepartment(empInfo.get("department"));
+                        }
+                    }
+                    
+                    empIn.close();
+                    empOut.close();
+                    empSocket.close();
+                } catch (Exception e) {
+                    // If we can't get employee info, set a default department
+                    user.setDepartment("Operations");
+                    System.err.println("Could not fetch employee details, using default department");
+                }
+                
                 return user;
                 
             } else {
