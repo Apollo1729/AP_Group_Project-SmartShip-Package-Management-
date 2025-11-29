@@ -287,9 +287,13 @@ public class Commands {
  }
 
 		
+		
+
+		// Add these commands to your Commands.java file
+
 		/**
-		 * GET AVAILABLE VEHICLES Command
-		 * Returns vehicles with sufficient capacity in specified zone
+		 * GET AVAILABLE VEHICLES Command (for Manager - with zone and capacity filtering)
+		 * This is for the smart vehicle assignment dialog
 		 */
 		public static class GetAvailableVehiclesCommand implements Command {
 		    @Override
@@ -301,24 +305,25 @@ public class Commands {
 		}
 
 		/**
-		 * GET VEHICLE DETAILS Command
+		 * GET ALL AVAILABLE VEHICLES Command (for Clerk - no filtering)
+		 * This returns all vehicles that are available for assignment
 		 */
-		public static class GetVehicleDetailsCommand implements Command {
+		public static class GetAllAvailableVehiclesCommand implements Command {
 		    @Override
 		    public Object execute(ObjectInputStream in) throws Exception {
-		        int vehicleId = (int) in.readObject();
-		        return DatabaseHelper.getVehicleDetails(vehicleId);
+		        // No parameters needed - just return all available vehicles
+		        return DatabaseHelper.getAvailableVehicles1();
 		    }
 		}
-		
+
 		/**
-		 * GET ALL VEHICLES Command
-		 * Returns complete list of all vehicles with driver and load information
+		 * GET AVAILABLE DRIVERS Command
+		 * Returns all active drivers
 		 */
-		public static class GetAllVehiclesCommand implements Command {
+		public static class GetAvailableDriversCommand implements Command {
 		    @Override
 		    public Object execute(ObjectInputStream in) throws Exception {
-		        return DatabaseHelper.getAllVehicles();
+		        return DatabaseHelper.getAvailableDrivers();
 		    }
 		}
 
@@ -402,5 +407,141 @@ public class Commands {
 		        return DatabaseHelper.getDriverPerformanceStats(startDate, endDate);
 		    }
 		}
-    
+		/**
+		 * shows all shipments for every customer Returns: list of all shipments of all
+		 * customers
+		 */
+		public static class GetAllOrdersCommand implements Command {
+			@Override
+			public Object execute(ObjectInputStream in) throws Exception {
+				return DatabaseHelper.getAllOrders();
+			}
+		}
+
+		public static class UpdateShipmentCommand implements Command {
+
+			@Override
+			public Object execute(ObjectInputStream in) throws Exception {
+				// Read fields sent from client
+				String trackingNumber = (String) in.readObject();
+				String newStatus = (String) in.readObject();
+				String newPaymentStatus = (String) in.readObject();
+
+				// Update database
+				boolean success = DatabaseHelper.updateShipment(trackingNumber, newStatus, newPaymentStatus);
+
+				// Return result to client
+				return success;
+			}
+		}
+
+		/**
+		 * Assign shipment - assigns driver, vehicle, and route
+		 */
+		public static class AssignShipmentFullCommand implements Command {
+			@Override
+			public Object execute(ObjectInputStream in) throws Exception {
+				String trackingNumber = (String) in.readObject();
+				Integer driverId = (Integer) in.readObject();
+				Integer vehicleId = (Integer) in.readObject();
+				String route = (String) in.readObject();
+
+				return DatabaseHelper.assignShipment(trackingNumber, driverId, vehicleId, route);
+			}
+		}
+
+		/**
+		 * get shipment assignment commands
+		 */
+		public static class GetShipmentAssignmentsCommand implements Command {
+			@Override
+			public Object execute(ObjectInputStream in) throws Exception {
+				return DatabaseHelper.getShipmentAssignments();
+			}
+		}
+		
+		/**
+		 * Returns all shipments with customer username included
+		 */
+		public static class GetAllOrdersWithCustomerNamesCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        return DatabaseHelper.getAllOrdersWithCustomerNames();
+		    }
+		}
+		public static class GetAvailableVehiclesCommand1 implements Command {
+			@Override
+			public Object execute(ObjectInputStream in) throws Exception {
+				// Calls the method we added to DatabaseHelper
+				return DatabaseHelper.getAvailableVehicles1();
+			}
+		}
+		/**
+		 * GET EMPLOYEE INFO Command
+		 */
+		public static class GetEmployeeInfoCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        int userId = (int) in.readObject();
+		        String role = (String) in.readObject();
+		        return DatabaseHelper.getEmployeeInfo(userId, role);
+		    }
+		}
+		
+		
+		/**
+		 * GET FLEET OVERVIEW Command - Complete fleet status for Manager
+		 */
+		public static class GetFleetOverviewCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        return DatabaseHelper.getFleetOverview();
+		    }
+		}
+
+		/**
+		 * GET VEHICLE SHIPMENTS Command - All shipments on a specific vehicle
+		 */
+		public static class GetVehicleShipmentsCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        int vehicleId = (int) in.readObject();
+		        return DatabaseHelper.getVehicleShipments(vehicleId);
+		    }
+		}
+
+		/**
+		 * GET DRIVER FLEET INFO Command - Vehicles and shipments for a driver
+		 */
+		public static class GetDriverFleetInfoCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        int driverId = (int) in.readObject();
+		        return DatabaseHelper.getDriverFleetInfo(driverId);
+		    }
+		}
+
+		/**
+		 * UNASSIGN SHIPMENT FROM VEHICLE Command - Remove shipment from vehicle
+		 */
+		public static class UnassignShipmentFromVehicleCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        String trackingNumber = (String) in.readObject();
+		        return DatabaseHelper.unassignShipmentFromVehicle(trackingNumber);
+		    }
+		}
+
+		/**
+		 * GET FLEET STATISTICS Command - Overall fleet performance metrics
+		 */
+		public static class GetFleetStatisticsCommand implements Command {
+		    @Override
+		    public Object execute(ObjectInputStream in) throws Exception {
+		        return DatabaseHelper.getFleetStatistics();
+		    }
+		}
+
+		
+		
 }

@@ -20,6 +20,7 @@ public class User implements Serializable{
     private String employeeId;
     private String hireDate;
     
+    
     public User() {}
     
     /**
@@ -40,6 +41,8 @@ public class User implements Serializable{
             this.hireDate = userInfo.get("hireDate");
         }
     }
+    
+
     
     // Getters and Setters
     public int getUserId() {

@@ -25,12 +25,15 @@ public class LoginFrame extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(950, 700);
         setLocationRelativeTo(null);
-        ImageIcon ssLogo = new ImageIcon("./assets/iutLogo.png");
-        setIconImage(ssLogo.getImage());
-
-        if (ssLogo.getIconWidth() > 0) {
-            setIconImage(ssLogo.getImage());
-            System.out.println("Icon set successfully!");
+        
+        try {
+            ImageIcon ssLogo = new ImageIcon("./assets/iutLogo.png");
+            if (ssLogo.getIconWidth() > 0) {
+                setIconImage(ssLogo.getImage());
+                System.out.println("Icon set successfully!");
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load icon: " + e.getMessage());
         }
         
         getContentPane().setBackground(new Color(249, 249, 249));
@@ -53,6 +56,7 @@ public class LoginFrame extends JFrame {
         add(mainPanel);
         
         setVisible(true);
+        System.out.println("LoginFrame created and visible");
     }
     
     private JPanel createLoginFormPanel() {
@@ -62,7 +66,7 @@ public class LoginFrame extends JFrame {
         panel.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 20));
         panel.setPreferredSize(new Dimension(400, getHeight()));
 
-        // Welcome text - MODIFIED FOR EMPLOYEES
+        // Welcome text
         JLabel welcomeLabel1 = new JLabel("Employee Portal");
         welcomeLabel1.setFont(new Font("Arial", Font.BOLD, 28));
         welcomeLabel1.setForeground(new Color(52, 73, 94));
@@ -73,7 +77,6 @@ public class LoginFrame extends JFrame {
         welcomeLabel2.setForeground(new Color(52, 73, 94));
         welcomeLabel2.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Add spacing
         panel.add(welcomeLabel1);
         panel.add(Box.createRigidArea(new Dimension(0, 5)));
         panel.add(welcomeLabel2);
@@ -137,7 +140,6 @@ public class LoginFrame extends JFrame {
         panel.add(loginButton);
         panel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Add flexible space to push signup link to bottom
         panel.add(Box.createVerticalGlue());
 
         JPanel signupPanel = new JPanel();
@@ -158,9 +160,14 @@ public class LoginFrame extends JFrame {
         signupButton.setFocusPainted(false);
         signupButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         signupButton.addActionListener(e -> {
-            new SignUpFrame();
-            setVisible(false);
-            dispose();
+            try {
+                new SignUpFrame();
+                setVisible(false);
+                dispose();
+            } catch (Exception ex) {
+                System.err.println("Error opening SignUpFrame: " + ex.getMessage());
+                ex.printStackTrace();
+            }
         });
         
         signupPanel.add(signupLabel);
@@ -172,42 +179,93 @@ public class LoginFrame extends JFrame {
     }
     
     private void handleLogin() {
+        System.out.println("=== LOGIN ATTEMPT STARTED ===");
+        
         String username = idField.getText().trim();
         String password = new String(passwordField.getPassword()).trim();
         
+        System.out.println("Username: " + username);
+        System.out.println("Password length: " + password.length());
+        
         // Create controller and authenticate
         LoginController controller = new LoginController();
-        User user = controller.authenticate(username, password);
+        System.out.println("LoginController created");
+        
+        User user = null;
+        try {
+            user = controller.authenticate(username, password);
+            System.out.println("Authentication completed");
+        } catch (Exception e) {
+            System.err.println("ERROR during authentication: " + e.getMessage());
+            e.printStackTrace();
+            javax.swing.JOptionPane.showMessageDialog(this, 
+                "Authentication error: " + e.getMessage(), 
+                "Error", 
+                javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         
         if (user != null) {
-            // Login successful - route to appropriate frame based on role
+            System.out.println("User authenticated successfully");
+            System.out.println("User ID: " + user.getUserId());
+            System.out.println("Username: " + user.getUsername());
+            System.out.println("Role: " + user.getRole());
+            System.out.println("Email: " + user.getEmail());
+            System.out.println("Phone: " + user.getPhone());
+            System.out.println("Address: " + user.getAddress());
+            System.out.println("Department: " + user.getDepartment());
+            
             String role = user.getRole();
             
+            System.out.println("Closing LoginFrame...");
             setVisible(false);
             dispose();
             
-            // MODIFIED: All employee roles go through the same dashboard system
-            switch (role) {
-                case "Clerk":
-                    new ClerkFrame(user);
-                    System.out.println("Opening Clerk Frame for: " + user.getUsername());
-                    break;
-                    
-                case "Driver":
-                    new DriverFrame(user);
-                    System.out.println("Opening Driver Frame for: " + user.getUsername());
-                    break;
-                    
-                case "Manager":
-                    new ManagerFrame(user);
-                    System.out.println("Opening Manager Frame for: " + user.getUsername());
-                    break;
-                    
-                default:
-                    System.out.println("Unknown role: " + role);
-                    break;
+            try {
+                System.out.println("Opening frame for role: " + role);
+                
+                switch (role) {
+                    case "Clerk":
+                        System.out.println("Creating ClerkFrame...");
+                        ClerkFrame clerkFrame = new ClerkFrame(user);
+                        System.out.println("ClerkFrame created successfully");
+                        break;
+                        
+                    case "Driver":
+                        System.out.println("Creating DriverFrame...");
+                        DriverFrame driverFrame = new DriverFrame(user);
+                        System.out.println("DriverFrame created successfully");
+                        break;
+                        
+                    case "Manager":
+                        System.out.println("Creating ManagerFrame...");
+                        ManagerFrame managerFrame = new ManagerFrame(user);
+                        System.out.println("ManagerFrame created successfully");
+                        break;
+                        
+                    default:
+                        System.err.println("Unknown role: " + role);
+                        javax.swing.JOptionPane.showMessageDialog(null, 
+                            "Unknown role: " + role, 
+                            "Error", 
+                            javax.swing.JOptionPane.ERROR_MESSAGE);
+                        new LoginFrame(); // Reopen login
+                        break;
+                }
+            } catch (Exception e) {
+                System.err.println("ERROR creating frame for role " + role + ": " + e.getMessage());
+                e.printStackTrace();
+                javax.swing.JOptionPane.showMessageDialog(null, 
+                    "Error opening application: " + e.getMessage() + "\n\nCheck console for details.", 
+                    "Error", 
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
+                new LoginFrame(); // Reopen login on error
             }
+        } else {
+            System.out.println("Authentication failed - user is null");
         }
+        
+        System.out.println("=== LOGIN ATTEMPT COMPLETED ===");
     }
     
     private JPanel createImagePanel() {
@@ -231,6 +289,7 @@ public class LoginFrame extends JFrame {
     }
 
     public static void main(String[] args) {
+        System.out.println("Starting SmartShip Employee Login...");
         new LoginFrame();
     }
 }

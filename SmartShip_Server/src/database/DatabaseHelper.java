@@ -1611,7 +1611,776 @@ public class DatabaseHelper {
         
         return customers;
     }
+    public static List<Map<String, String>> getAllOrders() {
+        String sql = "SELECT shipment_id, tracking_number, recipient_info, weight, " +
+                     "package_type, zone, status, cost, payment_status " +
+                     "FROM shipments ORDER BY created_at DESC";
 
+        List<Map<String, String>> orders = new ArrayList<>();
+
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Map<String, String> order = new HashMap<>();
+                order.put("shipmentId", String.valueOf(rs.getInt("shipment_id")));
+                order.put("trackingNumber", rs.getString("tracking_number"));
+                order.put("recipientInfo", rs.getString("recipient_info"));
+                order.put("weight", String.valueOf(rs.getDouble("weight")));
+                order.put("packageType", rs.getString("package_type"));
+                order.put("zone", String.valueOf(rs.getInt("zone")));
+                order.put("status", rs.getString("status"));
+                order.put("cost", String.format("%.2f", rs.getDouble("cost")));
+                order.put("paymentStatus", rs.getString("payment_status"));
+                orders.add(order);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return orders;
+    }
+   /**
+    * This method gets all the available drivers that exists within the database
+    * Returns drivers with status 'Active'
+    */
+   public static List<Map<String, String>> getAvailableDrivers() {
+       String sql = "SELECT d.driver_id, d.user_id, d.license_number, d.license_expiry, " +
+                    "d.vehicle_id, d.total_deliveries, d.rating, d.status, " +
+                    "u.username " +
+                    "FROM drivers d " +
+                    "JOIN users u ON d.user_id = u.user_id " +
+                    "WHERE d.status = 'Active' " +
+                    "ORDER BY u.username";
+       
+       List<Map<String, String>> drivers = new ArrayList<>();
+       try (Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery()) {
+           
+           while (rs.next()) {
+               Map<String, String> driver = new HashMap<>();
+               driver.put("driverId", String.valueOf(rs.getInt("driver_id")));
+               driver.put("userId", String.valueOf(rs.getInt("user_id")));
+               driver.put("username", rs.getString("username"));
+               driver.put("licenseNumber", rs.getString("license_number"));
+               driver.put("totalDeliveries", String.valueOf(rs.getInt("total_deliveries")));
+               driver.put("rating", String.format("%.1f", rs.getDouble("rating")));
+               driver.put("status", rs.getString("status"));
+               drivers.add(driver);
+           }
+       } catch (SQLException e) {
+           e.printStackTrace();
+       }
+       return drivers;
+   }
+
+   /**
+    * Method that gets all the available vehicles within the database so the clerk can assign shipment to a particular readily available vehicle
+    * Returns vehicles with status indicating availability
+    */
+   public static List<Map<String, String>> getAvailableVehicles1() {
+       String sql = "SELECT vehicle_id, driver_id, vehicle_type, license_plate, " +
+                    "capacity, status, current_weight, current_item_count, " +
+                    "last_maintenance_date, next_maintenance_date " +
+                    "FROM vehicles " +
+                    "WHERE status IN ('Available', 'Active') " +
+                    "ORDER BY vehicle_type, license_plate";
+       
+       List<Map<String, String>> vehicles = new ArrayList<>();
+       try (Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery()) {
+           
+           while (rs.next()) {
+               Map<String, String> vehicle = new HashMap<>();
+               vehicle.put("vehicleId", String.valueOf(rs.getInt("vehicle_id")));
+               vehicle.put("vehicleType", rs.getString("vehicle_type"));
+               vehicle.put("licensePlate", rs.getString("license_plate"));
+               vehicle.put("capacity", String.format("%.2f", rs.getDouble("capacity")));
+               vehicle.put("currentWeight", String.format("%.2f", rs.getDouble("current_weight")));
+               vehicle.put("currentItemCount", String.valueOf(rs.getInt("current_item_count")));
+               vehicle.put("status", rs.getString("status"));
+               vehicles.add(vehicle);
+           }
+       } catch (SQLException e) {
+           e.printStackTrace();
+       }
+       return vehicles;
+   }
+
+
+
+   
+   /**
+    * Returns shipments with customer username included
+    */
+   public static List<Map<String, String>> getAllOrdersWithCustomerNames() {
+       String sql = "SELECT s.shipment_id, s.tracking_number, s.recipient_info, s.weight, " +
+                    "s.package_type, s.zone, s.status, s.cost, s.payment_status, s.payment_method, " +
+                    "s.sender_info, s.created_at, u.username as customer_name " +
+                    "FROM shipments s " +
+                    "JOIN users u ON s.user_id = u.user_id " +
+                    "ORDER BY s.created_at DESC";
+
+       List<Map<String, String>> orders = new ArrayList<>();
+
+       try (Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery()) {
+
+           while (rs.next()) {
+               Map<String, String> order = new HashMap<>();
+               order.put("shipmentId", String.valueOf(rs.getInt("shipment_id")));
+               order.put("trackingNumber", rs.getString("tracking_number"));
+               order.put("recipientInfo", rs.getString("recipient_info"));
+               order.put("weight", String.valueOf(rs.getDouble("weight")));
+               order.put("packageType", rs.getString("package_type"));
+               order.put("zone", String.valueOf(rs.getInt("zone")));
+               order.put("status", rs.getString("status"));
+               order.put("cost", String.format("%.2f", rs.getDouble("cost")));
+               order.put("paymentStatus", rs.getString("payment_status"));
+               
+               String paymentMethod = rs.getString("payment_method");
+               order.put("paymentMethod", paymentMethod != null ? paymentMethod : "N/A");
+               
+               order.put("senderInfo", rs.getString("sender_info"));
+               order.put("customerName", rs.getString("customer_name"));
+               
+               Timestamp timestamp = rs.getTimestamp("created_at");
+               if (timestamp != null) {
+                   SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+                   order.put("date", sdf.format(new java.util.Date(timestamp.getTime())));
+               }
+               
+               orders.add(order);
+           }
+
+       } catch (SQLException e) {
+           System.err.println("Error in getAllOrdersWithCustomerNames: " + e.getMessage());
+           e.printStackTrace();
+       }
+
+       return orders;
+   }
+   public static boolean updateShipment(String trackingNumber, String newStatus, String newPaymentStatus) {
+       String sql = "UPDATE shipments SET status = ?, payment_status = ? WHERE tracking_number = ?";
+
+       try (Connection conn = getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+           stmt.setString(1, newStatus);
+           stmt.setString(2, newPaymentStatus);  
+           stmt.setString(3, trackingNumber);
+
+           return stmt.executeUpdate() > 0;
+
+       } catch (Exception e) {
+           e.printStackTrace();
+           return false;
+       }
+   }
+///---------------------------------------------NEW ASSIGNMENTS---------------------------///
+// Replace these methods in DatabaseHelper.java
+
+/**
+ * Returns current driver, vehicle, and route assignments for shipments
+ * Fixed to match actual database schema - driver comes from vehicles table
+ */
+public static Map<String, Map<String, String>> getShipmentAssignments() {
+    String sql = "SELECT s.tracking_number, " +
+                "v.vehicle_id, v.license_plate, v.vehicle_type, " +
+                "v.driver_id, u.username as driver_name, " +
+                "sa.status, sa.assigned_date " +
+                "FROM shipments s " +
+                "LEFT JOIN shipment_assignments sa ON s.shipment_id = sa.shipment_id " +
+                "LEFT JOIN vehicles v ON sa.vehicle_id = v.vehicle_id " +
+                "LEFT JOIN drivers d ON v.driver_id = d.user_id " +
+                "LEFT JOIN users u ON d.user_id = u.user_id " +
+                "WHERE sa.assignment_id IS NOT NULL";
+    
+    Map<String, Map<String, String>> assignments = new HashMap<>();
+    try (Connection conn = getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql);
+         ResultSet rs = stmt.executeQuery()) {
+        
+        while (rs.next()) {
+            String trackingNumber = rs.getString("tracking_number");
+            Map<String, String> assignment = new HashMap<>();
+            
+            // Get vehicle info
+            int vehicleId = rs.getInt("vehicle_id");
+            if (!rs.wasNull()) {
+                assignment.put("vehicleId", String.valueOf(vehicleId));
+                assignment.put("licensePlate", rs.getString("license_plate"));
+                assignment.put("vehicleType", rs.getString("vehicle_type"));
+            }
+            
+            // Get driver info (from vehicle)
+            int driverId = rs.getInt("driver_id");
+            if (!rs.wasNull()) {
+                assignment.put("driverId", String.valueOf(driverId));
+                String driverName = rs.getString("driver_name");
+                if (driverName != null) {
+                    assignment.put("driverName", driverName);
+                }
+            }
+            
+            // Get assignment status
+            String status = rs.getString("status");
+            if (status != null) {
+                assignment.put("status", status);
+            }
+            
+            java.sql.Timestamp assignedDate = rs.getTimestamp("assigned_date");
+            if (assignedDate != null) {
+                assignment.put("assignedDate", assignedDate.toString());
+            }
+            
+            assignments.put(trackingNumber, assignment);
+        }
+    } catch (SQLException e) {
+        System.err.println("Error in getShipmentAssignments: " + e.getMessage());
+        e.printStackTrace();
+    }
+    return assignments;
+}
+
+/**
+ * This method assigns a shipment to a vehicle and optionally a driver
+ * Driver is assigned to the vehicle, not directly to the shipment
+ */
+public static boolean assignShipment(String trackingNumber, Integer driverId, 
+                                     Integer vehicleId, String route) {
+    // Get shipment_id from tracking number
+    String getShipmentIdSql = "SELECT shipment_id FROM shipments WHERE tracking_number = ?";
+    
+    // Check if assignment already exists
+    String checkAssignmentSql = "SELECT assignment_id FROM shipment_assignments WHERE shipment_id = ?";
+    
+    // Insert new assignment
+    String insertAssignmentSql = 
+        "INSERT INTO shipment_assignments (shipment_id, vehicle_id, assigned_date, route_order, status) " +
+        "VALUES (?, ?, NOW(), 1, 'Assigned')";
+    
+    // Update existing assignment
+    String updateAssignmentSql = 
+        "UPDATE shipment_assignments SET " +
+        "vehicle_id = ?, " +
+        "assigned_date = NOW() " +
+        "WHERE shipment_id = ?";
+    
+    // Update vehicle's driver
+    String updateVehicleDriverSql = "UPDATE vehicles SET driver_id = ? WHERE vehicle_id = ?";
+    
+    // Update driver delivery count (only for new assignments)
+    String updateDriverSql = "UPDATE drivers SET total_deliveries = total_deliveries + 1 WHERE user_id = ?";
+    
+    try (Connection conn = getConnection()) {
+        conn.setAutoCommit(false);
+        
+        // Get shipment_id
+        int shipmentId = 0;
+        try (PreparedStatement stmt = conn.prepareStatement(getShipmentIdSql)) {
+            stmt.setString(1, trackingNumber);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                shipmentId = rs.getInt("shipment_id");
+            } else {
+                System.err.println("Shipment not found: " + trackingNumber);
+                conn.rollback();
+                return false;
+            }
+        }
+        
+        // Only proceed if vehicleId is provided
+        if (vehicleId != null) {
+            // Check if assignment exists
+            boolean assignmentExists = false;
+            try (PreparedStatement stmt = conn.prepareStatement(checkAssignmentSql)) {
+                stmt.setInt(1, shipmentId);
+                ResultSet rs = stmt.executeQuery();
+                assignmentExists = rs.next();
+            }
+            
+            // Insert or update assignment
+            if (assignmentExists) {
+                // Update existing
+                try (PreparedStatement stmt = conn.prepareStatement(updateAssignmentSql)) {
+                    stmt.setInt(1, vehicleId);
+                    stmt.setInt(2, shipmentId);
+                    stmt.executeUpdate();
+                }
+            } else {
+                // Insert new
+                try (PreparedStatement stmt = conn.prepareStatement(insertAssignmentSql)) {
+                    stmt.setInt(1, shipmentId);
+                    stmt.setInt(2, vehicleId);
+                    stmt.executeUpdate();
+                }
+            }
+            
+            // If driver is provided, assign driver to vehicle
+            if (driverId != null) {
+                try (PreparedStatement stmt = conn.prepareStatement(updateVehicleDriverSql)) {
+                    stmt.setInt(1, driverId);
+                    stmt.setInt(2, vehicleId);
+                    stmt.executeUpdate();
+                }
+                
+                // Update driver delivery count (only if new assignment)
+                if (!assignmentExists) {
+                    try (PreparedStatement stmt = conn.prepareStatement(updateDriverSql)) {
+                        stmt.setInt(1, driverId);
+                        stmt.executeUpdate();
+                    }
+                }
+            }
+        } else if (driverId != null) {
+            // If only driver is provided (no vehicle), we can't do anything
+            // because drivers are assigned to vehicles, not directly to shipments
+            System.out.println("Cannot assign driver without vehicle");
+        }
+        
+        conn.commit();
+        System.out.println("Successfully assigned shipment " + trackingNumber);
+        return true;
+        
+    } catch (SQLException e) {
+        System.err.println("Error in assignShipment: " + e.getMessage());
+        e.printStackTrace();
+        try {
+            Connection conn = getConnection();
+            conn.rollback();
+        } catch (Exception ex) {
+            // ignore
+        }
+        return false;
+    }
+}
+
+/**
+ * Returns all shipments assigned to vehicles driven by a specific driver
+ */
+public static List<Map<String, String>> getAssignmentsByDriver(int driverId) {
+    String sql = "SELECT s.tracking_number, s.recipient_info, s.address, s.status, " +
+                "v.license_plate, v.vehicle_type, sa.assigned_date " +
+                "FROM vehicles v " +
+                "JOIN shipment_assignments sa ON v.vehicle_id = sa.vehicle_id " +
+                "JOIN shipments s ON sa.shipment_id = s.shipment_id " +
+                "JOIN drivers d ON v.driver_id = d.user_id " +
+                "WHERE d.user_id = ? " +
+                "ORDER BY sa.assigned_date DESC";
+    
+    List<Map<String, String>> assignments = new ArrayList<>();
+    try (Connection conn = getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setInt(1, driverId);
+        ResultSet rs = stmt.executeQuery();
+        
+        while (rs.next()) {
+            Map<String, String> assignment = new HashMap<>();
+            assignment.put("trackingNumber", rs.getString("tracking_number"));
+            assignment.put("recipientInfo", rs.getString("recipient_info"));
+            assignment.put("address", rs.getString("address"));
+            assignment.put("status", rs.getString("status"));
+            assignment.put("licensePlate", rs.getString("license_plate"));
+            assignment.put("vehicleType", rs.getString("vehicle_type"));
+            
+            java.sql.Timestamp assignedDate = rs.getTimestamp("assigned_date");
+            if (assignedDate != null) {
+                assignment.put("assignedDate", assignedDate.toString());
+            }
+            
+            assignments.add(assignment);
+        }
+    } catch (SQLException e) {
+        System.err.println("Error in getAssignmentsByDriver: " + e.getMessage());
+        e.printStackTrace();
+    }
+    return assignments;
+}
+
+/**
+ * Returns all shipments assigned to a specific vehicle
+ */
+public static List<Map<String, String>> getAssignmentsByVehicle(int vehicleId) {
+    String sql = "SELECT s.tracking_number, s.recipient_info, s.weight, s.status, sa.assigned_date " +
+                "FROM shipment_assignments sa " +
+                "JOIN shipments s ON sa.shipment_id = s.shipment_id " +
+                "WHERE sa.vehicle_id = ? " +
+                "ORDER BY sa.assigned_date DESC";
+    
+    List<Map<String, String>> assignments = new ArrayList<>();
+    try (Connection conn = getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setInt(1, vehicleId);
+        ResultSet rs = stmt.executeQuery();
+        
+        while (rs.next()) {
+            Map<String, String> assignment = new HashMap<>();
+            assignment.put("trackingNumber", rs.getString("tracking_number"));
+            assignment.put("recipientInfo", rs.getString("recipient_info"));
+            assignment.put("weight", String.valueOf(rs.getDouble("weight")));
+            assignment.put("status", rs.getString("status"));
+            
+            java.sql.Timestamp assignedDate = rs.getTimestamp("assigned_date");
+            if (assignedDate != null) {
+                assignment.put("assignedDate", assignedDate.toString());
+            }
+            
+            assignments.add(assignment);
+        }
+    } catch (SQLException e) {
+        System.err.println("Error in getAssignmentsByVehicle: " + e.getMessage());
+        e.printStackTrace();
+    }
+    return assignments;
+}
+
+/**
+ * Removes an assignment by deleting it from shipment_assignments
+ */
+public static boolean removeAssignment(String trackingNumber, String assignmentType) {
+    String getShipmentIdSql = "SELECT shipment_id FROM shipments WHERE tracking_number = ?";
+    String deleteAssignmentSql = "DELETE FROM shipment_assignments WHERE shipment_id = ?";
+    
+    try (Connection conn = getConnection()) {
+        conn.setAutoCommit(false);
+        
+        // Get shipment_id
+        int shipmentId = 0;
+        try (PreparedStatement stmt = conn.prepareStatement(getShipmentIdSql)) {
+            stmt.setString(1, trackingNumber);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                shipmentId = rs.getInt("shipment_id");
+            } else {
+                conn.rollback();
+                return false;
+            }
+        }
+        
+        // Delete assignment
+        try (PreparedStatement stmt = conn.prepareStatement(deleteAssignmentSql)) {
+            stmt.setInt(1, shipmentId);
+            int deleted = stmt.executeUpdate();
+            
+            if (deleted > 0) {
+                conn.commit();
+                return true;
+            } else {
+                conn.rollback();
+                return false;
+            }
+        }
+    } catch (SQLException e) {
+        System.err.println("Error in removeAssignment: " + e.getMessage());
+        e.printStackTrace();
+        return false;
+    }
+}
+/**************************************Fleet Management ************************************/
+
+
+/**
+ * GET FLEET OVERVIEW - Complete fleet status for Manager
+ * Returns all vehicles with current load, driver info, and assigned shipments count
+ */
+public static List<Map<String, String>> getFleetOverview() {
+    String sql = "SELECT " +
+                "v.vehicle_id, " +
+                "COALESCE(v.vehicle_number, CONCAT('VEH-', v.vehicle_id)) as vehicle_number, " +
+                "v.vehicle_type, " +
+                "v.license_plate, " +
+                "v.capacity, " +
+                "COALESCE(v.current_weight, 0) as current_weight, " +
+                "COALESCE(v.current_item_count, 0) as item_count, " +
+                "COALESCE(v.zone, 1) as zone, " +
+                "v.status, " +
+                "COALESCE(u.username, 'Unassigned') as driver_name, " +
+                "u.phone as driver_phone, " +
+                "d.total_deliveries, " +
+                "d.rating, " +
+                "COUNT(sa.assignment_id) as assigned_shipments, " +
+                "ROUND((COALESCE(v.current_weight, 0) / v.capacity) * 100, 1) as utilization " +
+                "FROM vehicles v " +
+                "LEFT JOIN drivers d ON v.driver_id = d.user_id " +
+                "LEFT JOIN users u ON d.user_id = u.user_id " +
+                "LEFT JOIN shipment_assignments sa ON v.vehicle_id = sa.vehicle_id " +
+                "GROUP BY v.vehicle_id " +
+                "ORDER BY v.vehicle_id";
+    
+    List<Map<String, String>> fleet = new ArrayList<>();
+    
+    try (Connection conn = getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql);
+         ResultSet rs = stmt.executeQuery()) {
+        
+        while (rs.next()) {
+            Map<String, String> vehicle = new HashMap<>();
+            vehicle.put("vehicleId", String.valueOf(rs.getInt("vehicle_id")));
+            vehicle.put("vehicleNumber", rs.getString("vehicle_number"));
+            vehicle.put("vehicleType", rs.getString("vehicle_type"));
+            vehicle.put("licensePlate", rs.getString("license_plate"));
+            vehicle.put("capacity", String.format("%.2f", rs.getDouble("capacity")));
+            vehicle.put("currentWeight", String.format("%.2f", rs.getDouble("current_weight")));
+            vehicle.put("itemCount", String.valueOf(rs.getInt("item_count")));
+            vehicle.put("zone", String.valueOf(rs.getInt("zone")));
+            vehicle.put("status", rs.getString("status"));
+            vehicle.put("driverName", rs.getString("driver_name"));
+            vehicle.put("driverPhone", rs.getString("driver_phone") != null ? rs.getString("driver_phone") : "N/A");
+            vehicle.put("totalDeliveries", String.valueOf(rs.getInt("total_deliveries")));
+            vehicle.put("rating", String.format("%.1f", rs.getDouble("rating")));
+            vehicle.put("assignedShipments", String.valueOf(rs.getInt("assigned_shipments")));
+            vehicle.put("utilization", String.format("%.1f", rs.getDouble("utilization")));
+            fleet.add(vehicle);
+        }
+        
+    } catch (SQLException e) {
+        System.err.println("Error getting fleet overview: " + e.getMessage());
+        e.printStackTrace();
+    }
+    
+    return fleet;
+}
+
+/**
+ * GET VEHICLE SHIPMENTS - All shipments assigned to a specific vehicle
+ * For Manager to see what's loaded on each vehicle
+ */
+public static List<Map<String, String>> getVehicleShipments(int vehicleId) {
+    String sql = "SELECT " +
+                "s.shipment_id, " +
+                "s.tracking_number, " +
+                "s.recipient_info, " +
+                "s.address, " +
+                "s.weight, " +
+                "s.package_type, " +
+                "s.zone, " +
+                "s.status, " +
+                "s.cost, " +
+                "s.created_at, " +
+                "u.username as customer_name, " +
+                "sa.assigned_date, " +
+                "sa.status as assignment_status " +
+                "FROM shipment_assignments sa " +
+                "JOIN shipments s ON sa.shipment_id = s.shipment_id " +
+                "JOIN users u ON s.user_id = u.user_id " +
+                "WHERE sa.vehicle_id = ? " +
+                "ORDER BY sa.assigned_date DESC";
+    
+    List<Map<String, String>> shipments = new ArrayList<>();
+    
+    try (Connection conn = getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        
+        stmt.setInt(1, vehicleId);
+        ResultSet rs = stmt.executeQuery();
+        
+        while (rs.next()) {
+            Map<String, String> shipment = new HashMap<>();
+            shipment.put("shipmentId", String.valueOf(rs.getInt("shipment_id")));
+            shipment.put("trackingNumber", rs.getString("tracking_number"));
+            shipment.put("recipientInfo", rs.getString("recipient_info"));
+            shipment.put("address", rs.getString("address") != null ? rs.getString("address") : "N/A");
+            shipment.put("weight", String.format("%.2f", rs.getDouble("weight")));
+            shipment.put("packageType", rs.getString("package_type"));
+            shipment.put("zone", String.valueOf(rs.getInt("zone")));
+            shipment.put("status", rs.getString("status"));
+            shipment.put("cost", String.format("%.2f", rs.getDouble("cost")));
+            shipment.put("customerName", rs.getString("customer_name"));
+            shipment.put("assignmentStatus", rs.getString("assignment_status"));
+            
+            Timestamp created = rs.getTimestamp("created_at");
+            if (created != null) {
+                shipment.put("createdAt", new SimpleDateFormat("yyyy-MM-dd HH:mm").format(created));
+            }
+            
+            Timestamp assigned = rs.getTimestamp("assigned_date");
+            if (assigned != null) {
+                shipment.put("assignedDate", new SimpleDateFormat("yyyy-MM-dd HH:mm").format(assigned));
+            }
+            
+            shipments.add(shipment);
+        }
+        
+    } catch (SQLException e) {
+        System.err.println("Error getting vehicle shipments: " + e.getMessage());
+        e.printStackTrace();
+    }
+    
+    return shipments;
+}
+
+/**
+ * GET DRIVER FLEET INFO - All vehicles and shipments for a specific driver
+ * Shows what vehicles a driver is assigned to and their current loads
+ */
+public static Map<String, Object> getDriverFleetInfo(int driverId) {
+    Map<String, Object> info = new HashMap<>();
+    
+    // Get driver's vehicles
+    String vehicleSql = "SELECT " +
+                       "v.vehicle_id, " +
+                       "COALESCE(v.vehicle_number, CONCAT('VEH-', v.vehicle_id)) as vehicle_number, " +
+                       "v.vehicle_type, " +
+                       "v.license_plate, " +
+                       "v.capacity, " +
+                       "COALESCE(v.current_weight, 0) as current_weight, " +
+                       "COALESCE(v.current_item_count, 0) as item_count, " +
+                       "v.status " +
+                       "FROM vehicles v " +
+                       "JOIN drivers d ON v.driver_id = d.user_id " +
+                       "WHERE d.user_id = ?";
+    
+    try (Connection conn = getConnection();
+         PreparedStatement stmt = conn.prepareStatement(vehicleSql)) {
+        
+        stmt.setInt(1, driverId);
+        ResultSet rs = stmt.executeQuery();
+        
+        List<Map<String, String>> vehicles = new ArrayList<>();
+        while (rs.next()) {
+            Map<String, String> vehicle = new HashMap<>();
+            vehicle.put("vehicleId", String.valueOf(rs.getInt("vehicle_id")));
+            vehicle.put("vehicleNumber", rs.getString("vehicle_number"));
+            vehicle.put("vehicleType", rs.getString("vehicle_type"));
+            vehicle.put("licensePlate", rs.getString("license_plate"));
+            vehicle.put("capacity", String.format("%.2f", rs.getDouble("capacity")));
+            vehicle.put("currentWeight", String.format("%.2f", rs.getDouble("current_weight")));
+            vehicle.put("itemCount", String.valueOf(rs.getInt("item_count")));
+            vehicle.put("status", rs.getString("status"));
+            vehicles.add(vehicle);
+        }
+        info.put("vehicles", vehicles);
+        
+        // Get assigned shipments
+        List<Map<String, String>> shipments = getAssignmentsByDriver(driverId);
+        info.put("shipments", shipments);
+        
+    } catch (SQLException e) {
+        System.err.println("Error getting driver fleet info: " + e.getMessage());
+        e.printStackTrace();
+    }
+    
+    return info;
+}
+
+/**
+ * UNASSIGN SHIPMENT FROM VEHICLE - Manager can remove a shipment from a vehicle
+ * Updates vehicle capacity and removes assignment
+ */
+public static boolean unassignShipmentFromVehicle(String trackingNumber) {
+    String getShipmentSql = "SELECT s.shipment_id, s.weight, sa.vehicle_id " +
+                           "FROM shipments s " +
+                           "JOIN shipment_assignments sa ON s.shipment_id = sa.shipment_id " +
+                           "WHERE s.tracking_number = ?";
+    
+    String deleteAssignmentSql = "DELETE FROM shipment_assignments WHERE shipment_id = ?";
+    
+    String updateVehicleSql = "UPDATE vehicles SET " +
+                             "current_weight = current_weight - ?, " +
+                             "current_item_count = current_item_count - 1 " +
+                             "WHERE vehicle_id = ?";
+    
+    String updateShipmentSql = "UPDATE shipments SET status = 'Pending', vehicle_id = NULL WHERE shipment_id = ?";
+    
+    try (Connection conn = getConnection()) {
+        conn.setAutoCommit(false);
+        
+        int shipmentId = 0;
+        double weight = 0;
+        int vehicleId = 0;
+        
+        // Get shipment info
+        try (PreparedStatement stmt = conn.prepareStatement(getShipmentSql)) {
+            stmt.setString(1, trackingNumber);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                shipmentId = rs.getInt("shipment_id");
+                weight = rs.getDouble("weight");
+                vehicleId = rs.getInt("vehicle_id");
+            } else {
+                conn.rollback();
+                return false;
+            }
+        }
+        
+        // Delete assignment
+        try (PreparedStatement stmt = conn.prepareStatement(deleteAssignmentSql)) {
+            stmt.setInt(1, shipmentId);
+            stmt.executeUpdate();
+        }
+        
+        // Update vehicle
+        try (PreparedStatement stmt = conn.prepareStatement(updateVehicleSql)) {
+            stmt.setDouble(1, weight);
+            stmt.setInt(2, vehicleId);
+            stmt.executeUpdate();
+        }
+        
+        // Update shipment status
+        try (PreparedStatement stmt = conn.prepareStatement(updateShipmentSql)) {
+            stmt.setInt(1, shipmentId);
+            stmt.executeUpdate();
+        }
+        
+        conn.commit();
+        System.out.println("Unassigned shipment " + trackingNumber + " from vehicle " + vehicleId);
+        return true;
+        
+    } catch (SQLException e) {
+        System.err.println("Error unassigning shipment: " + e.getMessage());
+        e.printStackTrace();
+        return false;
+    }
+}
+
+/**
+ * GET FLEET STATISTICS - Overall fleet performance metrics
+ */
+public static Map<String, String> getFleetStatistics() {
+    String sql = "SELECT " +
+                "COUNT(v.vehicle_id) as total_vehicles, " +
+                "COUNT(CASE WHEN v.status = 'Available' THEN 1 END) as available, " +
+                "COUNT(CASE WHEN v.status = 'In Use' THEN 1 END) as in_use, " +
+                "COUNT(CASE WHEN v.status = 'Full' THEN 1 END) as full, " +
+                "COUNT(CASE WHEN v.driver_id IS NULL THEN 1 END) as unassigned_drivers, " +
+                "AVG(COALESCE(v.current_weight, 0) / v.capacity * 100) as avg_utilization, " +
+                "SUM(COALESCE(v.current_weight, 0)) as total_load, " +
+                "SUM(v.capacity) as total_capacity, " +
+                "COUNT(DISTINCT sa.shipment_id) as total_assigned_shipments " +
+                "FROM vehicles v " +
+                "LEFT JOIN shipment_assignments sa ON v.vehicle_id = sa.vehicle_id";
+    
+    Map<String, String> stats = new HashMap<>();
+    
+    try (Connection conn = getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql);
+         ResultSet rs = stmt.executeQuery()) {
+        
+        if (rs.next()) {
+            stats.put("totalVehicles", String.valueOf(rs.getInt("total_vehicles")));
+            stats.put("available", String.valueOf(rs.getInt("available")));
+            stats.put("inUse", String.valueOf(rs.getInt("in_use")));
+            stats.put("full", String.valueOf(rs.getInt("full")));
+            stats.put("unassignedDrivers", String.valueOf(rs.getInt("unassigned_drivers")));
+            stats.put("avgUtilization", String.format("%.1f", rs.getDouble("avg_utilization")));
+            stats.put("totalLoad", String.format("%.2f", rs.getDouble("total_load")));
+            stats.put("totalCapacity", String.format("%.2f", rs.getDouble("total_capacity")));
+            stats.put("totalAssignedShipments", String.valueOf(rs.getInt("total_assigned_shipments")));
+        }
+        
+    } catch (SQLException e) {
+        System.err.println("Error getting fleet statistics: " + e.getMessage());
+        e.printStackTrace();
+    }
+    
+    return stats;
+}
 
     // --- End of class ---
 }
