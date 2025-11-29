@@ -22,13 +22,19 @@ import java.awt.event.ActionEvent;
  * Manager Dashboard - handles shipment assignment and reporting
  */
 public class ManagerFrame extends JFrame {
-    private User currentUser;
+    private static final long serialVersionUID = 1L;
+	private User currentUser;
     private JPanel contentPanel;
     private CardLayout cardLayout;
     private Timer autoRefreshTimer;
     private boolean autoRefreshEnabled = false;
     private JPanel currentDashboardStatsPanel;
     private JTextArea currentReportArea;
+    
+    private JPanel fleetStatsPanel;
+    private JTable fleetTable;
+    private DefaultTableModel fleetTableModel;
+    
     // Color scheme
     private final Color PRIMARY_COLOR = new Color(163, 67, 53);
     private final Color SIDEBAR_COLOR = new Color(52, 73, 94);
@@ -82,12 +88,6 @@ public class ManagerFrame extends JFrame {
         
         setTitle("SmartShip Manager Portal - " + user.getUsername());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                stopAutoRefresh();
-            }
-        });
         setSize(1200, 800);
         setLocationRelativeTo(null);
         
@@ -96,13 +96,9 @@ public class ManagerFrame extends JFrame {
             setIconImage(icon.getImage());
         }
         
-        // Main layout
         setLayout(new BorderLayout());
-        
-        // Add sidebar
         add(createSidebar(), BorderLayout.WEST);
         
-        // Add content area with CardLayout
         cardLayout = new CardLayout();
         contentPanel = new JPanel(cardLayout);
         contentPanel.setBackground(CONTENT_BG);
@@ -110,27 +106,16 @@ public class ManagerFrame extends JFrame {
         // Add different panels
         contentPanel.add(createDashboardPanel(), "DASHBOARD");
         contentPanel.add(createPendingShipmentsPanel(), "PENDING");
+        contentPanel.add(createFleetManagementPanel(), "FLEET");  // ADD THIS LINE
         contentPanel.add(createReportsPanel(), "REPORTS");
         contentPanel.add(createProfilePanel(), "PROFILE");
-        contentPanel.add(createVehiclesPanel(), "VEHICLES");
         
         add(contentPanel, BorderLayout.CENTER);
-        
-        // Show dashboard by default
         cardLayout.show(contentPanel, "DASHBOARD");
-        //Setup keyboard shortcuts
-        setupKeyboardShortcuts();
-
-        // Add window listener for cleanup
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                stopAutoRefresh();
-            }
-        });
         
         setVisible(true);
     }
+
     
     /**
      * Creates the sidebar navigation
@@ -160,13 +145,13 @@ public class ManagerFrame extends JFrame {
         // Navigation buttons
         addNavButton(sidebar, "📊 Dashboard", "DASHBOARD");
         addNavButton(sidebar, "📦 Pending Shipments", "PENDING");
+        addNavButton(sidebar, "🚚 Fleet Management", "FLEET");  // ADD THIS LINE
         addNavButton(sidebar, "📈 Reports", "REPORTS");
         addNavButton(sidebar, "👤 Profile", "PROFILE");
-        addNavButton(sidebar, "🚛 Fleet Management", "VEHICLES");
         
         sidebar.add(Box.createVerticalGlue());
         
-        // Logout button at bottom
+        // Logout button
         JButton logoutBtn = createStyledButton("🚪 Logout", PRIMARY_COLOR);
         logoutBtn.setMaximumSize(new Dimension(200, 40));
         logoutBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -175,7 +160,364 @@ public class ManagerFrame extends JFrame {
         
         return sidebar;
     }
-    
+    /**
+     * NEW METHOD: Create Fleet Management Panel
+     */
+    private JPanel createFleetManagementPanel() {
+        JPanel panel = new JPanel(new BorderLayout(20, 20));
+        panel.setBackground(CONTENT_BG);
+        panel.setBorder(new EmptyBorder(30, 30, 30, 30));
+        
+        // Header with refresh button
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(CONTENT_BG);
+        
+        JLabel headerLabel = new JLabel("Fleet Management");
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 28));
+        headerLabel.setForeground(SIDEBAR_COLOR);
+        headerPanel.add(headerLabel, BorderLayout.WEST);
+        
+        JButton refreshBtn = createStyledButton("🔄 Refresh", PRIMARY_COLOR);
+        refreshBtn.addActionListener(e -> refreshFleetData());
+        headerPanel.add(refreshBtn, BorderLayout.EAST);
+        
+        panel.add(headerPanel, BorderLayout.NORTH);
+        
+        // Create split panel: stats on top, fleet table below
+        JPanel contentPanel = new JPanel(new BorderLayout(0, 20));
+        contentPanel.setBackground(CONTENT_BG);
+        
+        // Statistics panel
+        JPanel statsPanel = createFleetStatsPanel();
+        contentPanel.add(statsPanel, BorderLayout.NORTH);
+        
+        // Fleet table
+        JPanel tablePanel = createFleetTablePanel();
+        contentPanel.add(tablePanel, BorderLayout.CENTER);
+        
+        panel.add(contentPanel, BorderLayout.CENTER);
+        
+        // Load initial data
+        loadFleetData();
+        
+        return panel;
+    }
+
+    /**
+     * Create Fleet Statistics Panel (cards showing metrics)
+     */
+    private JPanel createFleetStatsPanel() {
+        JPanel statsPanel = new JPanel(new GridLayout(1, 4, 20, 0));
+        statsPanel.setBackground(CONTENT_BG);
+        
+        // Create stat cards (will be populated by loadFleetData)
+        statsPanel.add(createStatCard("Total Vehicles", "Loading...", "🚛"));
+        statsPanel.add(createStatCard("Available", "Loading...", "✅"));
+        statsPanel.add(createStatCard("In Use", "Loading...", "🔄"));
+        statsPanel.add(createStatCard("Avg Utilization", "Loading...", "📊"));
+        
+        return statsPanel;
+    }
+
+    /**
+     * Create Fleet Table Panel
+     */
+    private JPanel createFleetTablePanel() {
+        JPanel tablePanel = new JPanel(new BorderLayout(10, 10));
+        tablePanel.setBackground(CONTENT_BG);
+        
+        JLabel tableLabel = new JLabel("Fleet Overview:");
+        tableLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        tableLabel.setForeground(SIDEBAR_COLOR);
+        tablePanel.add(tableLabel, BorderLayout.NORTH);
+        
+        // Create table
+        String[] columns = {
+            "Vehicle ID", "Vehicle #", "Type", "License Plate", "Driver", 
+            "Zone", "Status", "Capacity (kg)", "Current Load (kg)", 
+            "Items", "Utilization %", "Assigned Shipments"
+        };
+        
+        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        
+        JTable fleetTable = new JTable(model);
+        fleetTable.setFont(new Font("Arial", Font.PLAIN, 11));
+        fleetTable.setRowHeight(30);
+        fleetTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 11));
+        fleetTable.getTableHeader().setBackground(SIDEBAR_COLOR);
+        fleetTable.getTableHeader().setForeground(Color.WHITE);
+        fleetTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        
+        // Add double-click listener to view vehicle details
+        fleetTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                if (evt.getClickCount() == 2) {
+                    int row = fleetTable.getSelectedRow();
+                    if (row != -1) {
+                        int vehicleId = Integer.parseInt(fleetTable.getValueAt(row, 0).toString());
+                        showVehicleDetails(vehicleId);
+                    }
+                }
+            }
+        });
+        
+        JScrollPane scrollPane = new JScrollPane(fleetTable);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220)));
+        tablePanel.add(scrollPane, BorderLayout.CENTER);
+        
+        // Action panel
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
+        actionPanel.setBackground(CONTENT_BG);
+        
+        JButton viewDetailsBtn = createStyledButton("View Details", SIDEBAR_COLOR);
+        viewDetailsBtn.addActionListener(e -> {
+            int row = fleetTable.getSelectedRow();
+            if (row != -1) {
+                int vehicleId = Integer.parseInt(fleetTable.getValueAt(row, 0).toString());
+                showVehicleDetails(vehicleId);
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Please select a vehicle",
+                    "No Selection",
+                    JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        
+        actionPanel.add(viewDetailsBtn);
+        tablePanel.add(actionPanel, BorderLayout.SOUTH);
+        
+        return tablePanel;
+    }
+
+    /**
+     * Load Fleet Data - THIS IS WHERE YOU USE THE METHODS
+     */
+    private void loadFleetData() {
+        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+            private List<Map<String, String>> fleetData;
+            private Map<String, String> statsData;
+            
+            @Override
+            protected Void doInBackground() throws Exception {
+                // HERE'S WHERE YOU USE THE METHODS!
+                fleetData = NetworkClient.getFleetOverview();
+                statsData = NetworkClient.getFleetStatistics();
+                return null;
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    // Update statistics cards
+                    updateFleetStats(statsData);
+                    
+                    // Update fleet table
+                    updateFleetTable(fleetData);
+                    
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(ManagerFrame.this,
+                        "Error loading fleet data: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+        worker.execute();
+    }
+
+    /**
+     * Update Fleet Statistics Display
+     */
+    private void updateFleetStats(Map<String, String> stats) {
+        if (stats == null) return;
+        
+        // Find the stats panel and update it
+        Component[] components = contentPanel.getComponents();
+        for (Component comp : components) {
+            if (comp instanceof JPanel) {
+                JPanel p = (JPanel) comp;
+                Component[] children = p.getComponents();
+                for (Component child : children) {
+                    if (child instanceof JPanel) {
+                        JPanel contentPanel = (JPanel) child;
+                        Component[] subChildren = contentPanel.getComponents();
+                        for (Component subChild : subChildren) {
+                            if (subChild instanceof JPanel) {
+                                JPanel statsPanel = (JPanel) subChild;
+                                statsPanel.removeAll();
+                                
+                                statsPanel.add(createStatCard("Total Vehicles", 
+                                    stats.getOrDefault("totalVehicles", "0"), "🚛"));
+                                statsPanel.add(createStatCard("Available", 
+                                    stats.getOrDefault("available", "0"), "✅"));
+                                statsPanel.add(createStatCard("In Use", 
+                                    stats.getOrDefault("inUse", "0"), "🔄"));
+                                statsPanel.add(createStatCard("Avg Utilization", 
+                                    stats.getOrDefault("avgUtilization", "0") + "%", "📊"));
+                                
+                                statsPanel.revalidate();
+                                statsPanel.repaint();
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Update Fleet Table
+     */
+    private void updateFleetTable(List<Map<String, String>> fleet) {
+        if (fleet == null) return;
+        
+        // Find the table and update it
+        Component[] components = contentPanel.getComponents();
+        for (Component comp : components) {
+            if (comp instanceof JPanel) {
+                findAndUpdateTable((JPanel) comp, fleet);
+            }
+        }
+    }
+
+    private void findAndUpdateTable(JPanel panel, List<Map<String, String>> fleet) {
+        Component[] children = panel.getComponents();
+        for (Component child : children) {
+            if (child instanceof JScrollPane) {
+                JScrollPane sp = (JScrollPane) child;
+                if (sp.getViewport().getView() instanceof JTable) {
+                    JTable table = (JTable) sp.getViewport().getView();
+                    DefaultTableModel model = (DefaultTableModel) table.getModel();
+                    model.setRowCount(0);
+                    
+                    for (Map<String, String> vehicle : fleet) {
+                        model.addRow(new Object[]{
+                            vehicle.get("vehicleId"),
+                            vehicle.get("vehicleNumber"),
+                            vehicle.get("vehicleType"),
+                            vehicle.get("licensePlate"),
+                            vehicle.get("driverName"),
+                            vehicle.get("zone"),
+                            vehicle.get("status"),
+                            vehicle.get("capacity"),
+                            vehicle.get("currentWeight"),
+                            vehicle.get("itemCount"),
+                            vehicle.get("utilization") + "%",
+                            vehicle.get("assignedShipments")
+                        });
+                    }
+                    return;
+                }
+            } else if (child instanceof JPanel) {
+                findAndUpdateTable((JPanel) child, fleet);
+            }
+        }
+    }
+
+    /**
+     * Refresh Fleet Data
+     */
+    private void refreshFleetData() {
+        loadFleetData();
+    }
+
+    /**
+     * Show Vehicle Details Dialog - THIS IS WHERE YOU USE getVehicleShipments
+     */
+    private void showVehicleDetails(int vehicleId) {
+        // Create dialog
+        JDialog dialog = new JDialog(this, "Vehicle Details - ID: " + vehicleId, true);
+        dialog.setSize(900, 600);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout(10, 10));
+        
+        JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
+        contentPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        contentPanel.setBackground(Color.WHITE);
+        
+        // Header
+        JLabel headerLabel = new JLabel("Shipments on Vehicle #" + vehicleId);
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        headerLabel.setForeground(SIDEBAR_COLOR);
+        contentPanel.add(headerLabel, BorderLayout.NORTH);
+        
+        // Table for shipments
+        String[] columns = {
+            "Tracking #", "Customer", "Recipient", "Address", 
+            "Weight (kg)", "Type", "Status", "Cost"
+        };
+        
+        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        
+        JTable shipmentsTable = new JTable(model);
+        shipmentsTable.setFont(new Font("Arial", Font.PLAIN, 12));
+        shipmentsTable.setRowHeight(30);
+        shipmentsTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+        
+        JScrollPane scrollPane = new JScrollPane(shipmentsTable);
+        contentPanel.add(scrollPane, BorderLayout.CENTER);
+        
+        // Load shipments for this vehicle - HERE'S WHERE YOU USE getVehicleShipments!
+        SwingWorker<List<Map<String, String>>, Void> worker = new SwingWorker<>() {
+            @Override
+            protected List<Map<String, String>> doInBackground() throws Exception {
+                return NetworkClient.getVehicleShipments(vehicleId);
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    List<Map<String, String>> shipments = get();
+                    if (shipments != null && !shipments.isEmpty()) {
+                        for (Map<String, String> shipment : shipments) {
+                            model.addRow(new Object[]{
+                                shipment.get("trackingNumber"),
+                                shipment.get("customerName"),
+                                shipment.get("recipientInfo"),
+                                shipment.get("address"),
+                                shipment.get("weight"),
+                                shipment.get("packageType"),
+                                shipment.get("status"),
+                                "$" + shipment.get("cost")
+                            });
+                        }
+                    } else {
+                        JLabel noData = new JLabel("No shipments assigned to this vehicle", SwingConstants.CENTER);
+                        noData.setFont(new Font("Arial", Font.ITALIC, 14));
+                        contentPanel.add(noData, BorderLayout.CENTER);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Error loading vehicle shipments: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+        worker.execute();
+        
+        // Close button
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setBackground(Color.WHITE);
+        JButton closeBtn = createStyledButton("Close", SIDEBAR_COLOR);
+        closeBtn.addActionListener(e -> dialog.dispose());
+        buttonPanel.add(closeBtn);
+        contentPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        dialog.add(contentPanel);
+        dialog.setVisible(true);
+    }
     /**
      * Helper to add navigation buttons
      */
@@ -280,8 +622,11 @@ public class ManagerFrame extends JFrame {
         JButton generateReportBtn = createStyledButton("Generate Report", SIDEBAR_COLOR);
         generateReportBtn.addActionListener(e -> cardLayout.show(contentPanel, "REPORTS"));
         
+            
         JButton viewFleetBtn = createStyledButton("View Fleet", SIDEBAR_COLOR);
-        viewFleetBtn.addActionListener(e -> cardLayout.show(contentPanel, "VEHICLES"));
+        viewFleetBtn.addActionListener(e -> cardLayout.show(contentPanel, "FLEET"));
+
+       
         
         actionsPanel.add(viewPendingBtn);
         actionsPanel.add(generateReportBtn);
@@ -297,16 +642,21 @@ public class ManagerFrame extends JFrame {
     /**
      * Load dashboard statistics
      */
+    /**
+     * Load dashboard statistics - ENHANCED VERSION
+     */
     private void loadDashboardStats(JPanel statsPanel) {
         SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
             private int pendingCount = 0;
             private String dailyReport = "";
+            private Map<String, String> fleetStats = null;
             
             @Override
             protected Void doInBackground() throws Exception {
                 List<Map<String, String>> pending = NetworkClient.getPendingShipments();
                 pendingCount = (pending != null) ? pending.size() : 0;
                 dailyReport = NetworkClient.generateDailyReport();
+                fleetStats = NetworkClient.getFleetStatistics(); // ADD THIS
                 return null;
             }
             
@@ -332,6 +682,13 @@ public class ManagerFrame extends JFrame {
                 
                 statsPanel.add(createStatCard("Today's Deliveries", deliveries, "🚚"));
                 statsPanel.add(createStatCard("Total Revenue", revenue, "💰"));
+                
+                // ADD FLEET STAT 
+                if (fleetStats != null) {
+                    String available = fleetStats.getOrDefault("available", "N/A");
+                    // add this as a 4th stat 
+                    statsPanel.add(createStatCard("Available Vehicles", available, "🚛"));
+                }
                 
                 statsPanel.revalidate();
                 statsPanel.repaint();
