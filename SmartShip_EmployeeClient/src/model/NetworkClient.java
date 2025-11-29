@@ -161,4 +161,44 @@ public class NetworkClient {
     public static List<Map<String, String>> getVehiclePackages(int vehicleId) {
         return (List<Map<String, String>>) sendCommand("GET_VEHICLE_PACKAGES", vehicleId);
     }
+    
+    /**
+     * GET FLEET OVERVIEW (for Manager)
+     */
+    @SuppressWarnings("unchecked")
+    public static List<Map<String, String>> getFleetOverview() {
+        return (List<Map<String, String>>) sendCommand("GET_FLEET_OVERVIEW");
+    }
+
+    /**
+     * GET VEHICLE SHIPMENTS (for Manager)
+     */
+    @SuppressWarnings("unchecked")
+    public static List<Map<String, String>> getVehicleShipments(int vehicleId) {
+        return (List<Map<String, String>>) sendCommand("GET_VEHICLE_SHIPMENTS", vehicleId);
+    }
+
+    /**
+     * GET DRIVER FLEET INFO (for Manager)
+     */
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> getDriverFleetInfo(int driverId) {
+        return (Map<String, Object>) sendCommand("GET_DRIVER_FLEET_INFO", driverId);
+    }
+
+    /**
+     * UNASSIGN SHIPMENT FROM VEHICLE (for Manager)
+     */
+    public static boolean unassignShipmentFromVehicle(String trackingNumber) {
+        Object result = sendCommand("UNASSIGN_SHIPMENT_FROM_VEHICLE", trackingNumber);
+        return result != null && (Boolean) result;
+    }
+
+    /**
+     * GET FLEET STATISTICS (for Manager)
+     */
+    @SuppressWarnings("unchecked")
+    public static Map<String, String> getFleetStatistics() {
+        return (Map<String, String>) sendCommand("GET_FLEET_STATISTICS");
+    }
 }
