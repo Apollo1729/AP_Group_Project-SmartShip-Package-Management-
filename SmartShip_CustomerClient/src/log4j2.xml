@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+        <!-- Change this for EmployeeClient vs CustomerClient -->
+        <Property name="LOG_DIR">logs/customer-client</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Console Appender -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <!-- Client Application Log -->
+        <RollingFile name="ClientFile" fileName="${LOG_DIR}/client.log"
+                     filePattern="${LOG_DIR}/client-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+        <!-- View Layer Log -->
+        <RollingFile name="ViewFile" fileName="${LOG_DIR}/view.log"
+                     filePattern="${LOG_DIR}/view-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="5MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+        <!-- Controller/Network Log -->
+        <RollingFile name="ControllerFile" fileName="${LOG_DIR}/controller.log"
+                     filePattern="${LOG_DIR}/controller-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="5MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+        <!-- Model Log -->
+        <RollingFile name="ModelFile" fileName="${LOG_DIR}/model.log"
+                     filePattern="${LOG_DIR}/model-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="5MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+        <!-- Error Log -->
+        <RollingFile name="ErrorFile" fileName="${LOG_DIR}/errors.log"
+                     filePattern="${LOG_DIR}/errors-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="5MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+            <Filters>
+                <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- View Package Logger -->
+        <Logger name="view" level="DEBUG" additivity="false">
+            <AppenderRef ref="ViewFile"/>
+            <AppenderRef ref="Console" level="INFO"/>
+            <AppenderRef ref="ErrorFile" level="ERROR"/>
+        </Logger>
+
+        <!-- Controller Package Logger -->
+        <Logger name="controller" level="DEBUG" additivity="false">
+            <AppenderRef ref="ControllerFile"/>
+            <AppenderRef ref="Console" level="INFO"/>
+            <AppenderRef ref="ErrorFile" level="ERROR"/>
+        </Logger>
+
+        <!-- Model Package Logger -->
+        <Logger name="model" level="DEBUG" additivity="false">
+            <AppenderRef ref="ModelFile"/>
+            <AppenderRef ref="Console" level="INFO"/>
+            <AppenderRef ref="ErrorFile" level="ERROR"/>
+        </Logger>
+
+        <!-- Root Logger -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="ClientFile"/>
+            <AppenderRef ref="ErrorFile" level="ERROR"/>
+        </Root>
+    </Loggers>
+</Configuration>
